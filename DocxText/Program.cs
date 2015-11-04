@@ -19,7 +19,7 @@ namespace DocxText {
         const string SOURCE_FILE = "gb1.docx";
 
         Dictionary<string, string> Subjects = new Dictionary<string, string>();
-
+        Dictionary<string, string> Confirmations = new Dictionary<string, string>();
 
         static void _t( String str ) {
             System.Diagnostics.Trace.WriteLine( str );
@@ -75,14 +75,20 @@ namespace DocxText {
         bool CheckAppeal(Row row, out ArrayList appeals, out ArrayList errors) {
             bool result = true;
             string cellText = "";
+            string tmp;
             errors = new ArrayList();
             ArrayList cellParsedText;
             ArrayList Subjects = new ArrayList();
             ArrayList NumbersAndDates = new ArrayList();
+            ArrayList Declarants = new ArrayList();
             appeals = new ArrayList();
+            // Объект для хранения общих данных обращения
+            Appeal NewAppeal = new Appeal();
             // Пропускаем первую и последнюю колонку.
             for (int colIndex = 1; colIndex < row.Cells.Count - 1; colIndex++) {
                 Cell c = row.Cells[colIndex];
+                cellText = "";
+                tmp = "";
                 // Собираем текст ячейки из всех параграфов в одну переменную.
                 for (int i = 0; i < c.Paragraphs.Count; i++) {
                     if (c.Paragraphs[i].Text.Trim() != "") {
@@ -90,8 +96,8 @@ namespace DocxText {
                     }
                 }
                 // Запускаем разбор текста из ячейки.
-                Appeal NewAppeal = new Appeal();
                 switch (colIndex) {
+                    // Субъект РФ+
                     case 1:
                         if (ParseSubject(cellText, out cellParsedText)) {
                             // Проверка завершилась успешно - заполняем массив субъектов
@@ -108,13 +114,110 @@ namespace DocxText {
                             }
                         }
                         break;
+                    // Содержание+
+                    case 2:
+                        if (ParseContent(cellText, out tmp)) {
+                            NewAppeal.content = tmp;
+                        } else {
+                            errors.Add("Содержание: " + tmp);
+                        }
+                        break;
+                    // Заявитель+
+                    case 3:
+                        if (ParseDeclarant(cellText, out cellParsedText)) {
+                            // Проверка завершилась успешно - заполняем массив субъектов
+                            foreach (string str in cellParsedText) {
+                                Declarants.Add(str);
+                            }
+                        } else {
+                            // Проверка завершилась с ошибкой.
+                            result = false;
+                            errors.Add("Кем заявлено: ");
+                            // Добавляем все сообщения об ошибках в errors.
+                            foreach (string str in cellParsedText) {
+                                errors[errors.Count - 1] += str + "; ";
+                            }
+                        }
+                        break;
+                    // Сведения о подтверждении
+                    case 4:
+                        if (ParseConfirmation(cellText, out tmp)) {
+                            NewAppeal.confirmation = tmp;
+                        } else {
+                            errors.Add("Сведения о подтверждении: " + tmp);
+                        }
+                        break;
+                    // Приянтые меры
+                    case 5:
+                        if (ParseMeasures(cellText, out tmp)) {
+                            NewAppeal.measures = tmp;
+                        } else {
+                            errors.Add("Приянтые меры: " + tmp);
+                        }
+                        break;
+                    // Номер и дата
+                    case 6:
+                        if (ParseNumberAndDate(cellText, out cellParsedText)) {
+                            // Проверка завершилась успешно - заполняем массив субъектов
+                            foreach (Tuple<string, string> NumDate in cellParsedText) {
+                                NumbersAndDates.Add(NumDate);
+                            }
+                        } else {
+                            // Проверка завершилась с ошибкой.
+                            result = false;
+                            errors.Add("Рег. номер и дата: ");
+                            // Добавляем все сообщения об ошибках в errors.
+                            foreach (string str in cellParsedText) {
+                                errors[errors.Count - 1] += str + "; ";
+                            }
+                        }
+                        break;
+                    // 7 - Уровень выборов
+                    // Партия
+                    case 8:
+                        if (ParseParty(cellText, out tmp)) {
+                            NewAppeal.party = tmp;
+                        } else {
+                            errors.Add("Партия: " + tmp);
+                        }
+
+                        break;
+                    // Тип заявителя
+                    case 9:
+                        if (ParseDeclarantType(cellText, out tmp)) {
+                            NewAppeal.declarant_type = tmp;
+                        } else {
+                            errors.Add("Тип заявителя: " + tmp);
+                        }
+
+                        break;
+                    // Тематика
+                    case 10:
+                        if (ParseTheme(cellText, out tmp)) {
+                            NewAppeal.theme = tmp;
+                        } else {
+                            errors.Add("Тематика: " + tmp);
+                        }
+                        break;
+                    // 11 - +
+                    // Исполнитель
+                    case 12:
+                        if (ParseExecutor(cellText, out tmp)) {
+                            NewAppeal.executor_id = tmp;
+                        } else {
+                            errors.Add("Исполнитель: " + tmp);
+                        }
+                        break;
                 }
             }
 
             // Создаём "простые" обращения
             foreach (string SubjCode in Subjects) {
-                foreach (string NumDate in NumbersAndDates) {
-                    appeals.Add(new Appeal());
+                foreach (Tuple<string, string> NumDate in NumbersAndDates) {
+                    NewAppeal.subjcode = SubjCode;
+                    NewAppeal.numb = NumDate.Item1;
+                    NewAppeal.f_date = NumDate.Item2;
+                    appeals.Add(NewAppeal);
                 }
             }
             return result;
@@ -134,7 +237,7 @@ namespace DocxText {
                     KeyValuePair<string, string> Subj = Subjects.First(s => s.Key == SubjectName.Trim());
                     resultData.Add(Subj.Value);
                 }
-                //result = true;
+                result = true;
             } catch (System.InvalidOperationException) {
                 resultData.Clear();
                 resultData.Add( "Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"" );
@@ -142,44 +245,106 @@ namespace DocxText {
 
             return result;
         }
-        static bool ParseContent(string content) {
+        bool ParseContent(string data, out string parsed) {
             bool result = false;
+            if (data == "") {
+                parsed = "Не заполнено обязательное поле; ";
+            } else {
+                parsed = PrepareRawData(data);
+                result = true;
+            }
             return result;
         }
-        static bool ParseDeclarant(string declarant) {
+        bool ParseDeclarant(string data, out ArrayList resultData) {
             bool result = false;
+            resultData = new ArrayList();
+            // Заглушка
+            resultData.Add("Какой-то заявитель");
+            result = true;
             return result;
         }
-        static bool ParseConfirmation(string confirmation) {
+        bool ParseConfirmation(string data, out string parsed) {
             bool result = false;
+            if (data == "") {
+                parsed = "Не заполнено обязательное поле; ";
+            } else {
+                // Заглушка
+                parsed = "Какое-то подтверждение";
+                result = true;
+            }
             return result;
         }
-        static bool ParseMeasures(string measures) {
+        bool ParseMeasures(string data, out string parsed) {
             bool result = false;
+            if (data == "") {
+                parsed = "Не заполнено обязательное поле; ";
+            } else {
+                parsed = PrepareRawData(data);
+                result = true;
+            }
             return result;
         }
-        static bool ParseNumberAndDate(string appealNumber, string appealDate) {
-            bool result = false;
+        bool ParseNumberAndDate(string appealNumber, out ArrayList appealDate) {
+            bool result = true;
+            appealDate = new ArrayList();
             //string sPattern = @"^\d{3}-\d{3}-\d{4}$";
+            Tuple<string, string> NumDate;
+            NumDate = Tuple.Create("1111", "12.12.2014");
+            appealDate.Add(NumDate);
+            NumDate = Tuple.Create("2222", "05.09.2015");
+            appealDate.Add(NumDate);
+            NumDate = Tuple.Create("3333", "11.10.2015");
+            appealDate.Add(NumDate);
+            //appealDate.Add
+            
             return result;
         }
-        static bool ParseParty(string party) {
+        bool ParseParty(string data, out string parsed) {
             bool result = false;
+            if (data == "") {
+                parsed = "Не заполнено обязательное поле; ";
+            } else {
+                // Заглушка
+                parsed = "Какая-то партия";
+                result = true;
+            }
             return result;
         }
-        static bool ParseDeclarantType(string declarantType) {
+        bool ParseDeclarantType(string data, out string parsed) {
             bool result = false;
+            if (data == "") {
+                parsed = "Не заполнено обязательное поле; ";
+            } else {
+                // Заглушка
+                parsed = "Какой-то заявитель";
+                result = true;
+            }
             return result;
         }
-        static bool ParseExecutor(string executor) {
+        bool ParseExecutor(string data, out string parsed) {
             bool result = false;
+            if (data == "") {
+                parsed = "Не заполнено обязательное поле; ";
+            } else {
+                // Заглушка
+                parsed = "Какой-то исполнитель";
+                result = true;
+            }
             return result;
         }
-        static bool ParseTheme(string theme) {
+        bool ParseTheme(string data, out string parsed) {
             bool result = false;
+            if (data == "") {
+                parsed = "Не заполнено обязательное поле";
+            } else {
+                // Заглушка
+                parsed = "Так себе тема";
+                result = true;
+            }
             return result;
         }
-        static string PrepareRawData(String data) {
+        string PrepareRawData(String data) {
+            // Удаляет лишние символы
             string result = Regex.Replace(data, @"\s+", " ");
             return result;
         }
@@ -215,6 +380,10 @@ namespace DocxText {
             */
 
             // DB emulation :)
+            Confirmations.Add("Нарушение не подтвердилось", "1");
+            Confirmations.Add("Нарушение подтвердилось", "2");
+            Confirmations.Add("Нарушение подтвердилось частично", "3");
+
             Subjects.Add("Республика Адыгея", "01");
             Subjects.Add("Республика Алтай", "04");
             Subjects.Add("Республика Башкортостан", "02");
@@ -348,12 +517,17 @@ namespace DocxText {
         public string numb;
         public string f_date;
         public string content;
+        public string confirmation;
         public string subjcode;
         public string parent_id;
         public string measures;
+        public string party;
+        public string declarant_type;
+        public string theme;
         public string created;
         public string content_cik;
         public string executor_id;
+        public bool isParent = false;
     }
 
 
