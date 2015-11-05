@@ -8,15 +8,16 @@ using Oracle.DataAccess.Client;
 using System.Data;
 using System.Collections;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace DocxText {
     class Program {
 
         const int RESULT_COLUMN = 13;
-        //const string PROGRAM_DIR = @"e:\akriko_converter\!_dev\";
-        const string PROGRAM_DIR = @"f:\@job\@Voskhod\AKRIKO\";
+        const string PROGRAM_DIR = @"e:\akriko_converter\!_dev\";
+        //const string PROGRAM_DIR = @"f:\@job\@Voskhod\AKRIKO\";
         //const string SOURCE_FILE = @"фрагмент зеленой книги_1 (1).docx";
-        const string SOURCE_FILE = "gb1.docx";
+        const string SOURCE_FILE = "gb2.docx";
 
         Dictionary<string, string> Subjects = new Dictionary<string, string>();
         Dictionary<string, string> Confirmations = new Dictionary<string, string>();
@@ -46,24 +47,30 @@ namespace DocxText {
             Paragraph p = appealsTable.Rows[0].Cells[RESULT_COLUMN].Paragraphs[0].Append("Выявленные несоответствия данных (для конвертации)");
             p.Alignment = Alignment.center;
             p.Bold();
-
+            bool Step2 = true;
             // Анализируем все строки таблицы.
             for (int rowIndex = 1; rowIndex < appealsTable.Rows.Count; rowIndex++) {
                 // checkResult = CheckAppeal(appealsTable.Rows[rowIndex]);
-                if (CheckAppeal(appealsTable.Rows[rowIndex], out SimpleAppeals, out RowErrors)) {
+                if (CheckAppeal(appealsTable.Rows[rowIndex], SimpleAppeals, out RowErrors)) {
                     // Проверка обращения прошла успешно.
-
                 } else {
                     // Проверка обращения завершилась с ошибками.
+                    Step2 = false;
                     // Записываем результат проверки в правую колонку.
                     foreach (string str in RowErrors) {
                         appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[0].Append(str);
                     }
-                    //p.FontSize(10);
                 }
             }
 
-            document.SaveAs(PROGRAM_DIR + "Ошибки конвертации " + (DateTime.Now).ToString("yyyy-MM-dd-HH-mm-ss") + ".docx");
+            string filePath = PROGRAM_DIR + "Ошибки конвертации " + (DateTime.Now).ToString("yyyy-MM-dd-HH-mm-ss") + ".docx";
+            document.SaveAs(filePath);
+            if (Step2) {
+                // Переходим ко второму этапу - запись в БД
+                MessageBox.Show("Несоответствий не выявлено.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            } else {
+                System.Diagnostics.Process.Start(filePath);
+            }
             // System.Diagnostics.Trace.WriteLine((DateTime.Now).ToString( "yyyy-MM-dd-H-mm-ss" ));
         }
         /// <summary>
@@ -72,7 +79,7 @@ namespace DocxText {
         /// </summary>
         /// <param name="row">Строка таблицы.</param>
         /// <param name="parsedData">out ArayList с данными либо с ошибками, если разбор завершился неудаче.</param>
-        bool CheckAppeal(Row row, out ArrayList appeals, out ArrayList errors) {
+        bool CheckAppeal(Row row, ArrayList appeals, out ArrayList errors) {
             bool result = true;
             string cellText = "";
             string tmp;
@@ -81,7 +88,7 @@ namespace DocxText {
             ArrayList Subjects = new ArrayList();
             ArrayList NumbersAndDates = new ArrayList();
             ArrayList Declarants = new ArrayList();
-            appeals = new ArrayList();
+            //appeals = new ArrayList();
             // Объект для хранения общих данных обращения
             Appeal NewAppeal = new Appeal();
             // Пропускаем первую и последнюю колонку.
@@ -119,6 +126,7 @@ namespace DocxText {
                         if (ParseContent(cellText, out tmp)) {
                             NewAppeal.content = tmp;
                         } else {
+                            result = false;
                             errors.Add("Содержание: " + tmp);
                         }
                         break;
@@ -144,6 +152,7 @@ namespace DocxText {
                         if (ParseConfirmation(cellText, out tmp)) {
                             NewAppeal.confirmation = tmp;
                         } else {
+                            result = false;
                             errors.Add("Сведения о подтверждении: " + tmp);
                         }
                         break;
@@ -152,6 +161,7 @@ namespace DocxText {
                         if (ParseMeasures(cellText, out tmp)) {
                             NewAppeal.measures = tmp;
                         } else {
+                            result = false;
                             errors.Add("Приянтые меры: " + tmp);
                         }
                         break;
@@ -178,6 +188,7 @@ namespace DocxText {
                         if (ParseParty(cellText, out tmp)) {
                             NewAppeal.party = tmp;
                         } else {
+                            result = false;
                             errors.Add("Партия: " + tmp);
                         }
 
@@ -187,6 +198,7 @@ namespace DocxText {
                         if (ParseDeclarantType(cellText, out tmp)) {
                             NewAppeal.declarant_type = tmp;
                         } else {
+                            result = false;
                             errors.Add("Тип заявителя: " + tmp);
                         }
 
@@ -196,6 +208,7 @@ namespace DocxText {
                         if (ParseTheme(cellText, out tmp)) {
                             NewAppeal.theme = tmp;
                         } else {
+                            result = false;
                             errors.Add("Тематика: " + tmp);
                         }
                         break;
@@ -205,6 +218,7 @@ namespace DocxText {
                         if (ParseExecutor(cellText, out tmp)) {
                             NewAppeal.executor_id = tmp;
                         } else {
+                            result = false;
                             errors.Add("Исполнитель: " + tmp);
                         }
                         break;
@@ -512,7 +526,7 @@ namespace DocxText {
             }
         }
     }
-    public class Appeal {
+    public struct Appeal {
         public string id;
         public string numb;
         public string f_date;
@@ -527,7 +541,24 @@ namespace DocxText {
         public string created;
         public string content_cik;
         public string executor_id;
-        public bool isParent = false;
+        public bool isParent;
+        void init() {
+            id = null;
+            numb = null;
+            f_date = null;
+            content = null;
+            confirmation = null;
+            subjcode = null;
+            parent_id = null;
+            measures = null;
+            party = null;
+            declarant_type = null;
+            theme = null;
+            created = null;
+            content_cik = null;
+            executor_id = null;
+            isParent = false;
+        }
     }
 
 
