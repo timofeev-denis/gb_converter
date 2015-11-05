@@ -1,35 +1,32 @@
-﻿using System;
+﻿using Novacode;
+using Oracle.DataAccess.Client;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Novacode;
-using Oracle.DataAccess.Client;
-using System.Data;
-using System.Collections;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace DocxText {
-    class Program {
 
+namespace GBConverter {
+    class Converter {
         const int RESULT_COLUMN = 13;
-        const string PROGRAM_DIR = @"e:\akriko_converter\!_dev\";
-        //const string PROGRAM_DIR = @"f:\@job\@Voskhod\AKRIKO\";
-        //const string SOURCE_FILE = @"фрагмент зеленой книги_1 (1).docx";
-        const string SOURCE_FILE = "gb2.docx";
 
         Dictionary<string, string> Subjects = new Dictionary<string, string>();
         Dictionary<string, string> Confirmations = new Dictionary<string, string>();
 
-        static void _t( String str ) {
-            System.Diagnostics.Trace.WriteLine( str );
+        static void _t(String str) {
+            System.Diagnostics.Trace.WriteLine(str);
         }
-        static void Main(string[] args) {
-            Program __instance = new Program();
-            __instance.Convert();
-        }
-        void Convert() {
+
+        public void Convert(string fileName, ProgressBar progressBar = null) {
+            if (fileName == "") {
+                throw new ArgumentException("Не указано имя файла для конвертации");
+            }
             // Загружаем справочник субъектов РФ из БД
             if (!this.LoadDictionaries()) {
                 return;
@@ -39,9 +36,9 @@ namespace DocxText {
             ArrayList SimpleAppeals = new ArrayList();
             DocX document;
             try {
-                document = DocX.Load(PROGRAM_DIR + SOURCE_FILE);
+                document = DocX.Load(fileName);
             } catch (System.IO.IOException e) {
-                MessageBox.Show(String.Format("Не удалось открыть файл {0}.\nВозможно он используется другой программой.\n\nРабота программы прекращена.", SOURCE_FILE), 
+                MessageBox.Show(String.Format("Не удалось открыть файл {0}.\nВозможно он используется другой программой.\n\nРабота программы прекращена.", fileName),
                     "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
@@ -67,16 +64,19 @@ namespace DocxText {
                         appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[0].Append(str);
                     }
                 }
+                double percent = (double) rowIndex / (appealsTable.Rows.Count - 1) * 100;
+                progressBar.Value = System.Convert.ToInt32(percent);
             }
 
-            string filePath = PROGRAM_DIR + "Ошибки конвертации " + (DateTime.Now).ToString("yyyy-MM-dd-HH-mm-ss") + ".docx";
-            document.SaveAs(filePath);
             if (Step2) {
                 // Переходим ко второму этапу - запись в БД
                 MessageBox.Show("Несоответствий не выявлено.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
             } else {
+                string filePath = Path.GetDirectoryName(fileName) + @"\Ошибки конвертации " + (DateTime.Now).ToString("yyyy-MM-dd-HH-mm-ss") + ".docx";
+                document.SaveAs(filePath);
                 System.Diagnostics.Process.Start(filePath);
             }
+            document.Dispose();
             // System.Diagnostics.Trace.WriteLine((DateTime.Now).ToString( "yyyy-MM-dd-H-mm-ss" ));
         }
         /// <summary>
@@ -122,7 +122,7 @@ namespace DocxText {
                             result = false;
                             errors.Add("Субъект Российской Федерации: ");
                             // Добавляем все сообщения об ошибках в errors.
-                            foreach(string str in cellParsedText ) {
+                            foreach (string str in cellParsedText) {
                                 errors[errors.Count - 1] += str + "; ";
                             }
                         }
@@ -260,7 +260,7 @@ namespace DocxText {
                 result = true;
             } catch (System.InvalidOperationException) {
                 resultData.Clear();
-                resultData.Add( "Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"" );
+                resultData.Add("Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"");
             }
 
             return result;
@@ -316,7 +316,7 @@ namespace DocxText {
             NumDate = Tuple.Create("3333", "11.10.2015");
             appealDate.Add(NumDate);
             //appealDate.Add
-            
+
             return result;
         }
         bool ParseParty(string data, out string parsed) {
@@ -369,7 +369,7 @@ namespace DocxText {
             return result;
         }
         bool LoadDictionaries() {
-            
+
             // UNCOMMENT!
             string oradb = "Data Source=RA00C000;User Id=voshod;Password=voshod;";
             OracleConnection conn = new OracleConnection(oradb);
@@ -388,7 +388,7 @@ namespace DocxText {
                 conn.Dispose();
                 return false;
             }
-            
+
             while (dr.Read()) {
                 if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
                     Subjects.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
@@ -400,7 +400,7 @@ namespace DocxText {
             dr.Dispose();
             cmd.Dispose();
             conn.Dispose();
-            
+
 
             // DB emulation :)
             /*
@@ -493,83 +493,5 @@ namespace DocxText {
             */
             return true;
         }
-        /// <summary>
-        /// Класс для работы с обращениями АКРИКО
-        /// </summary>
-        class Akriko {
-            public enum TableName { appeal, cat_executors, cat_declarants }
-
-            int AddAppeal(Appeal appeal) {
-                // content & content_cik - ?
-                // {7} - created
-                string Query = "INSERT INTO akriko.appeal " +
-                    "(id, numb, f_date, content, subjcode, parent_id, meri, created, content_cik, ispolnitel_cik_id) " +
-                    String.Format(" VALUES('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}')",
-                    GetID(TableName.appeal), appeal.numb, appeal.f_date, appeal.content,
-                    appeal.subjcode, appeal.parent_id, appeal.measures, appeal.created,
-                    appeal.content_cik, appeal.executor_id);
-
-                return 0;
-            }
-            public string GetID(TableName t) {
-                /// 1. Считать значение последовательности.
-                /// 2. Перевести в строку.
-                /// 3. Объединить с "100".
-                // Соединяемся с БД или используем общее соединение.
-                // ...
-                // Считываем значение последовательности.
-                long sequence;
-                switch (t) {
-                    case TableName.appeal:
-                        break;
-                    case TableName.cat_declarants:
-                        break;
-                    case TableName.cat_executors:
-                        break;
-                }
-                // Для отладки.
-                Random R = new Random();
-
-                sequence = R.Next(1000, 2000);
-                //new Random().Next(1000, 2000);
-                return "100" + sequence.ToString();
-            }
-        }
     }
-    public struct Appeal {
-        public string id;
-        public string numb;
-        public string f_date;
-        public string content;
-        public string confirmation;
-        public string subjcode;
-        public string parent_id;
-        public string measures;
-        public string party;
-        public string declarant_type;
-        public string theme;
-        public string created;
-        public string content_cik;
-        public string executor_id;
-        public bool isParent;
-        void init() {
-            id = null;
-            numb = null;
-            f_date = null;
-            content = null;
-            confirmation = null;
-            subjcode = null;
-            parent_id = null;
-            measures = null;
-            party = null;
-            declarant_type = null;
-            theme = null;
-            created = null;
-            content_cik = null;
-            executor_id = null;
-            isParent = false;
-        }
-    }
-
-
 }
