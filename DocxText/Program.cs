@@ -37,8 +37,14 @@ namespace DocxText {
 
             ArrayList RowErrors = new ArrayList();
             ArrayList SimpleAppeals = new ArrayList();
-            
-            DocX document = DocX.Load(PROGRAM_DIR + SOURCE_FILE);
+            DocX document;
+            try {
+                document = DocX.Load(PROGRAM_DIR + SOURCE_FILE);
+            } catch (System.IO.IOException e) {
+                MessageBox.Show(String.Format("Не удалось открыть файл {0}.\nВозможно он используется другой программой.\n\nРабота программы прекращена.", SOURCE_FILE), 
+                    "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
             Table appealsTable = document.Tables[0];
 
             // Добавляем колонку с информацией о выявленных несоответствиях по обращению (результат проверки).
@@ -365,16 +371,15 @@ namespace DocxText {
         bool LoadDictionaries() {
             
             // UNCOMMENT!
-
-            /*
             string oradb = "Data Source=RA00C000;User Id=voshod;Password=voshod;";
             OracleConnection conn = new OracleConnection(oradb);
             conn.Open();
             OracleCommand cmd = new OracleCommand();
             cmd.Connection = conn;
-            cmd.CommandText = "select namate, subjcode from ate_history where prsubj='1' and datedel is null";
-            cmd.CommandType = CommandType.Text;
             OracleDataReader dr = null;
+            cmd.CommandType = CommandType.Text;
+            // Субъекты.
+            cmd.CommandText = "select namate, subjcod from ate_history where prsubj='1' and datedel is null";
             try {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
@@ -383,17 +388,22 @@ namespace DocxText {
                 conn.Dispose();
                 return false;
             }
-
+            
             while (dr.Read()) {
-                Subjects.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
+                    Subjects.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                }
                 //subjects.FirstOrDefault()
             }
+
+
             dr.Dispose();
             cmd.Dispose();
             conn.Dispose();
-            */
+            
 
             // DB emulation :)
+            /*
             Confirmations.Add("Нарушение не подтвердилось", "1");
             Confirmations.Add("Нарушение подтвердилось", "2");
             Confirmations.Add("Нарушение подтвердилось частично", "3");
@@ -480,7 +490,7 @@ namespace DocxText {
             Subjects.Add("Ханты-Мансийский автономный округ - Югра", "86");
             Subjects.Add("Чукотский автономный округ", "87");
             Subjects.Add("Ямало-Ненецкий автономный округ", "89");
-
+            */
             return true;
         }
         /// <summary>
