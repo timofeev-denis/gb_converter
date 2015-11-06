@@ -13,6 +13,8 @@ using System.Windows.Forms;
 
 
 namespace GBConverter {
+    enum MessageType { Header, Text };
+
     class Converter {
         const int RESULT_COLUMN = 13;
 
@@ -56,6 +58,7 @@ namespace GBConverter {
             Paragraph p = appealsTable.Rows[0].Cells[RESULT_COLUMN].Paragraphs[0].Append("Выявленные несоответствия данных (для конвертации)");
             p.Alignment = Alignment.center;
             p.Bold();
+            p.FontSize(10);
             bool Step2 = true;
             // Анализируем все строки таблицы.
             for (int rowIndex = 1; rowIndex < appealsTable.Rows.Count; rowIndex++) {
@@ -65,10 +68,26 @@ namespace GBConverter {
                 } else {
                     // Проверка обращения завершилась с ошибками.
                     Step2 = false;
+                    bool FirstError = true;
                     // Записываем результат проверки в правую колонку.
-                    foreach (string str in RowErrors) {
-                        appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[0].Append(str);
-                        appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[0].FontSize(10);
+                    foreach (ErrorMessage msg in RowErrors) {
+                        if (msg.Type == MessageType.Header) {
+                            if (FirstError) {
+                                p = appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[0];
+                            } else {
+                                // Добавляем пустую строку
+                                appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].InsertParagraph("");
+                                p = appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].InsertParagraph();
+                            }
+                            p.Append(msg.Message);
+                            p.Bold();
+                            p.FontSize(10);
+                            FirstError = false;
+                        } else {
+                            int cnt = appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs.Count;
+                            appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[cnt - 1].Append(msg.Message);
+                            appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[cnt - 1].FontSize(10);
+                        }
                     }
                 }
                 double percent = (double) rowIndex / (appealsTable.Rows.Count - 1) * 100;
@@ -128,10 +147,10 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add("Субъект Российской Федерации: ");
+                            errors.Add(new ErrorMessage("Субъект Российской Федерации: ", MessageType.Header));
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
-                                errors[errors.Count - 1] += str;
+                                errors.Add(new ErrorMessage(str, MessageType.Text));
                             }
                         }
                         break;
@@ -141,7 +160,8 @@ namespace GBConverter {
                             NewAppeal.content = tmp;
                         } else {
                             result = false;
-                            errors.Add("Содержание: " + tmp);
+                            errors.Add(new ErrorMessage("Содержание: ", MessageType.Header));
+                            errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
                     // Заявитель+
@@ -154,10 +174,11 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add("Кем заявлено: ");
+                            errors.Add(new ErrorMessage("Кем заявлено: ", MessageType.Header));
+
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
-                                errors[errors.Count - 1] += str;
+                                errors.Add(new ErrorMessage(str,MessageType.Text));
                             }
                         }
                         break;
@@ -167,7 +188,8 @@ namespace GBConverter {
                             NewAppeal.confirmation = tmp;
                         } else {
                             result = false;
-                            errors.Add("Сведения о подтверждении: " + tmp);
+                            errors.Add(new ErrorMessage("Сведения о подтверждении: ", MessageType.Header));
+                            errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
                     // Приянтые меры
@@ -176,7 +198,8 @@ namespace GBConverter {
                             NewAppeal.measures = tmp;
                         } else {
                             result = false;
-                            errors.Add("Приянтые меры: " + tmp);
+                            errors.Add(new ErrorMessage("Приянтые меры: ", MessageType.Header));
+                            errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
                     // Номер и дата
@@ -189,10 +212,10 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add("Рег. номер и дата: ");
+                            errors.Add(new ErrorMessage("Рег. номер и дата: ", MessageType.Header));
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
-                                errors[errors.Count - 1] += str;
+                                errors.Add(new ErrorMessage(str, MessageType.Text));
                             }
                         }
                         break;
@@ -206,10 +229,10 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add("Партия: ");
+                            errors.Add(new ErrorMessage("Партия: ", MessageType.Header));
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
-                                errors[errors.Count - 1] += str;
+                                errors.Add(new ErrorMessage(str, MessageType.Text));
                             }
                         }
 
@@ -220,7 +243,8 @@ namespace GBConverter {
                             NewAppeal.declarant_type = tmp;
                         } else {
                             result = false;
-                            errors.Add("Тип заявителя: " + tmp);
+                            errors.Add(new ErrorMessage("Тип заявителя: ", MessageType.Header));
+                            errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
 
                         break;
@@ -233,10 +257,11 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add("Тематика: ");
+                            errors.Add(new ErrorMessage("Тематика: ", MessageType.Header));
+
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
-                                errors[errors.Count - 1] += str;
+                                errors.Add(new ErrorMessage(str, MessageType.Text));
                             }
                         }
                         break;
@@ -247,7 +272,8 @@ namespace GBConverter {
                             NewAppeal.executor_id = tmp;
                         } else {
                             result = false;
-                            errors.Add("Исполнитель: " + tmp);
+                            errors.Add(new ErrorMessage("Исполнитель: ", MessageType.Header));
+                            errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
                 }
@@ -692,6 +718,16 @@ namespace GBConverter {
             Subjects.Add("Ямало-Ненецкий автономный округ", "89");
             */
             return true;
+        }
+    }
+
+    class ErrorMessage {
+        public readonly string Message;
+        public readonly MessageType Type;
+
+        public ErrorMessage(string msg, MessageType t) {
+            this.Message = msg;
+            this.Type = t;
         }
     }
 }
