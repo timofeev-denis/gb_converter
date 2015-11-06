@@ -35,7 +35,7 @@ namespace GBConverter {
             if (fileName == "") {
                 throw new ArgumentException("Не указано имя файла для конвертации");
             }
-            // Загружаем справочник субъектов РФ из БД
+            // Загружаем справочники из БД
             if (!this.LoadDictionaries()) {
                 return;
             }
@@ -44,6 +44,7 @@ namespace GBConverter {
             ArrayList SimpleAppeals = new ArrayList();
             DocX document;
             try {
+                // Открываем файл с "ЗЕлёной книгой".
                 document = DocX.Load(fileName);
             } catch (System.IO.IOException e) {
                 MessageBox.Show(String.Format("Не удалось открыть файл {0}.\nВозможно он используется другой программой.\n\nРабота программы прекращена.", fileName),
@@ -60,9 +61,9 @@ namespace GBConverter {
             p.Bold();
             p.FontSize(10);
             bool Step2 = true;
+
             // Анализируем все строки таблицы.
             for (int rowIndex = 1; rowIndex < appealsTable.Rows.Count; rowIndex++) {
-                // checkResult = CheckAppeal(appealsTable.Rows[rowIndex]);
                 if (CheckAppeal(appealsTable.Rows[rowIndex], SimpleAppeals, out RowErrors)) {
                     // Проверка обращения прошла успешно.
                 } else {
@@ -327,7 +328,6 @@ namespace GBConverter {
             return result;
         }
         bool ParseDeclarant(string inputData, out ArrayList resultData) {
-            bool result = true;
             resultData = new ArrayList();
             ArrayList AppealDeclarants = new ArrayList();
             
@@ -384,9 +384,7 @@ namespace GBConverter {
                     DeclarantFakeID++;
                 }
             }
-            result = true;
-
-            return result;
+            return true;
         }
         bool ParseConfirmation(string data, out string parsed) {
             bool result = false;
@@ -414,20 +412,40 @@ namespace GBConverter {
             }
             return result;
         }
-        bool ParseNumberAndDate(string appealNumber, out ArrayList appealDate) {
-            bool result = true;
-            appealDate = new ArrayList();
-            //string sPattern = @"^\d{3}-\d{3}-\d{4}$";
-            Tuple<string, string> NumDate;
-            NumDate = Tuple.Create("1111", "12.12.2014");
-            appealDate.Add(NumDate);
-            NumDate = Tuple.Create("2222", "05.09.2015");
-            appealDate.Add(NumDate);
-            NumDate = Tuple.Create("3333", "11.10.2015");
-            appealDate.Add(NumDate);
-            //appealDate.Add
+        bool ParseNumberAndDate(string inputData, out ArrayList resultData) {
+            resultData = new ArrayList();
+            ArrayList AppealDeclarants = new ArrayList();
 
-            return result;
+            // Проверяем, что поле заполнено
+            if (inputData == "") {
+                resultData.Add("Не заполнено обязательное поле; ");
+                return false;
+            }
+
+            // Удаляем лишние символы.
+            inputData = inputData.Replace("№", "");
+            inputData = PrepareRawData(inputData);
+
+            // Разделяем текст на части. В Words будут записаны номера+даты.
+            char[] Separators = { ';' };
+            string[] Words = inputData.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
+
+            // Проверяем формат.
+            string pattern = @"^\w+ от \d{1,2}\.\d{1,2}\.\d{4}$";
+            string num, f_date;
+            string trimmed;
+            foreach (string str in Words) {
+                trimmed = str.Trim();
+                if (!Regex.IsMatch(trimmed, pattern)) {
+                    resultData.Clear();
+                    resultData.Add("Данные не соответствуют формату; ");
+                    return false;
+                }
+                num = trimmed.Substring(0, trimmed.IndexOf(" от ")).Trim();
+                f_date = trimmed.Substring(trimmed.IndexOf(" от ") + 1).Trim();
+                resultData.Add(Tuple.Create(num, f_date));
+            }
+            return true;
         }
         bool ParseParty(string inputData, out ArrayList resultData) {
             bool result = true;
