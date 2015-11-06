@@ -504,8 +504,6 @@ namespace GBConverter {
             return result.Trim();
         }
         bool LoadDictionaries() {
-
-            // UNCOMMENT!
             string oradb = "Data Source=RA00C000;User Id=voshod;Password=voshod;";
             OracleConnection conn = new OracleConnection(oradb);
             conn.Open();
@@ -562,7 +560,7 @@ namespace GBConverter {
                 }
             }
 
-            // партии
+            // Партии.
             for (int i = 1; i < 75; i++) {
                 Parties.Add(i.ToString(), "1001000" + (100 + i).ToString());
             }
@@ -584,7 +582,8 @@ namespace GBConverter {
             }
 
             // Исполнители.
-            cmd.CommandText = "select REPLACE(numb, '.', ''), TO_CHAR(id) from akriko.cls_zayaviteli order by numb";
+            //cmd.CommandText = "select REPLACE(numb, '.', ''), TO_CHAR(id) from akriko.cls_zayaviteli order by numb";
+            cmd.CommandText = "select l_name, TO_CHAR(id) from akriko.cat_executors order by l_name";
             try {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
