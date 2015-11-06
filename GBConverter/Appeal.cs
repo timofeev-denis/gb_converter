@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace GBConverter {
-    class Appeal {
+    struct Appeal {
         public string id;
         public string numb;
         public string f_date;
@@ -21,7 +22,8 @@ namespace GBConverter {
         public string content_cik;
         public string executor_id;
         public bool isParent;
-        void init() {
+        public ArrayList multi;
+        public void init() {
             id = null;
             numb = null;
             f_date = null;
@@ -37,6 +39,7 @@ namespace GBConverter {
             content_cik = null;
             executor_id = null;
             isParent = false;
+            multi = new ArrayList();
         }
     }
 }

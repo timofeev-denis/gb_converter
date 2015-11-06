@@ -18,6 +18,12 @@ namespace GBConverter {
 
         Dictionary<string, string> Subjects = new Dictionary<string, string>();
         Dictionary<string, string> Confirmations = new Dictionary<string, string>();
+        Dictionary<string, string> Themes = new Dictionary<string, string>();
+        Dictionary<string, string> Parties = new Dictionary<string, string>();
+        Dictionary<string, string> DecTypes = new Dictionary<string, string>();
+        Dictionary<string, string> Executors = new Dictionary<string, string>();
+        List<string[]> Declarants = new System.Collections.Generic.List<string[]>();
+        long DeclarantFakeID = 1;
 
         static void _t(String str) {
             System.Diagnostics.Trace.WriteLine(str);
@@ -62,6 +68,7 @@ namespace GBConverter {
                     // Записываем результат проверки в правую колонку.
                     foreach (string str in RowErrors) {
                         appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[0].Append(str);
+                        appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].Paragraphs[0].FontSize(10);
                     }
                 }
                 double percent = (double) rowIndex / (appealsTable.Rows.Count - 1) * 100;
@@ -90,13 +97,14 @@ namespace GBConverter {
             string cellText = "";
             string tmp;
             errors = new ArrayList();
-            ArrayList cellParsedText;
+            ArrayList cellParsedValues;
             ArrayList Subjects = new ArrayList();
             ArrayList NumbersAndDates = new ArrayList();
             ArrayList Declarants = new ArrayList();
             //appeals = new ArrayList();
             // Объект для хранения общих данных обращения
             Appeal NewAppeal = new Appeal();
+            NewAppeal.init();
             // Пропускаем первую и последнюю колонку.
             for (int colIndex = 1; colIndex < row.Cells.Count - 1; colIndex++) {
                 Cell c = row.Cells[colIndex];
@@ -112,9 +120,9 @@ namespace GBConverter {
                 switch (colIndex) {
                     // Субъект РФ+
                     case 1:
-                        if (ParseSubject(cellText, out cellParsedText)) {
+                        if (ParseSubject(cellText, out cellParsedValues)) {
                             // Проверка завершилась успешно - заполняем массив субъектов
-                            foreach (string str in cellParsedText) {
+                            foreach (string str in cellParsedValues) {
                                 Subjects.Add(str);
                             }
                         } else {
@@ -122,8 +130,8 @@ namespace GBConverter {
                             result = false;
                             errors.Add("Субъект Российской Федерации: ");
                             // Добавляем все сообщения об ошибках в errors.
-                            foreach (string str in cellParsedText) {
-                                errors[errors.Count - 1] += str + "; ";
+                            foreach (string str in cellParsedValues) {
+                                errors[errors.Count - 1] += str;
                             }
                         }
                         break;
@@ -138,9 +146,9 @@ namespace GBConverter {
                         break;
                     // Заявитель+
                     case 3:
-                        if (ParseDeclarant(cellText, out cellParsedText)) {
+                        if (ParseDeclarant(cellText, out cellParsedValues)) {
                             // Проверка завершилась успешно - заполняем массив субъектов
-                            foreach (string str in cellParsedText) {
+                            foreach (string str in cellParsedValues) {
                                 Declarants.Add(str);
                             }
                         } else {
@@ -148,8 +156,8 @@ namespace GBConverter {
                             result = false;
                             errors.Add("Кем заявлено: ");
                             // Добавляем все сообщения об ошибках в errors.
-                            foreach (string str in cellParsedText) {
-                                errors[errors.Count - 1] += str + "; ";
+                            foreach (string str in cellParsedValues) {
+                                errors[errors.Count - 1] += str;
                             }
                         }
                         break;
@@ -173,9 +181,9 @@ namespace GBConverter {
                         break;
                     // Номер и дата
                     case 6:
-                        if (ParseNumberAndDate(cellText, out cellParsedText)) {
+                        if (ParseNumberAndDate(cellText, out cellParsedValues)) {
                             // Проверка завершилась успешно - заполняем массив субъектов
-                            foreach (Tuple<string, string> NumDate in cellParsedText) {
+                            foreach (Tuple<string, string> NumDate in cellParsedValues) {
                                 NumbersAndDates.Add(NumDate);
                             }
                         } else {
@@ -183,19 +191,26 @@ namespace GBConverter {
                             result = false;
                             errors.Add("Рег. номер и дата: ");
                             // Добавляем все сообщения об ошибках в errors.
-                            foreach (string str in cellParsedText) {
-                                errors[errors.Count - 1] += str + "; ";
+                            foreach (string str in cellParsedValues) {
+                                errors[errors.Count - 1] += str;
                             }
                         }
                         break;
                     // 7 - Уровень выборов
                     // Партия
                     case 8:
-                        if (ParseParty(cellText, out tmp)) {
-                            NewAppeal.party = tmp;
+                        if (ParseParty(cellText, out cellParsedValues)) {
+                            foreach (string str in cellParsedValues) {
+                                NewAppeal.multi.Add(new string[] { "tematika", str });
+                            }
                         } else {
+                            // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add("Партия: " + tmp);
+                            errors.Add("Партия: ");
+                            // Добавляем все сообщения об ошибках в errors.
+                            foreach (string str in cellParsedValues) {
+                                errors[errors.Count - 1] += str;
+                            }
                         }
 
                         break;
@@ -211,11 +226,18 @@ namespace GBConverter {
                         break;
                     // Тематика
                     case 10:
-                        if (ParseTheme(cellText, out tmp)) {
-                            NewAppeal.theme = tmp;
+                        if (ParseTheme(cellText, out cellParsedValues)) {
+                            foreach(string str in cellParsedValues) {
+                                NewAppeal.multi.Add(new string[] { "tematika", str });
+                            }
                         } else {
+                            // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add("Тематика: " + tmp);
+                            errors.Add("Тематика: ");
+                            // Добавляем все сообщения об ошибках в errors.
+                            foreach (string str in cellParsedValues) {
+                                errors[errors.Count - 1] += str;
+                            }
                         }
                         break;
                     // 11 - +
@@ -245,6 +267,9 @@ namespace GBConverter {
         bool ParseSubject(string inputData, out ArrayList resultData) {
             bool result = false;
             resultData = new ArrayList();
+            if (inputData == "") {
+                resultData.Add("Не заполнено обязательное поле; ");
+            }
             // Удаляем лишние символы.
             inputData = PrepareRawData(inputData);
             // Разделяем текст на части. В Words будут записаны названия субъектов.
@@ -260,7 +285,7 @@ namespace GBConverter {
                 result = true;
             } catch (System.InvalidOperationException) {
                 resultData.Clear();
-                resultData.Add("Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"");
+                resultData.Add("Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"; ");
             }
 
             return result;
@@ -275,12 +300,66 @@ namespace GBConverter {
             }
             return result;
         }
-        bool ParseDeclarant(string data, out ArrayList resultData) {
-            bool result = false;
+        bool ParseDeclarant(string inputData, out ArrayList resultData) {
+            bool result = true;
             resultData = new ArrayList();
-            // Заглушка
-            resultData.Add("Какой-то заявитель");
+            ArrayList AppealDeclarants = new ArrayList();
+            
+            // Проверяем, что поле заполнено
+            if (inputData == "") {
+                resultData.Add("Не заполнено обязательное поле; ");
+                return false;
+            }
+            
+            // Удаляем лишние символы.
+            inputData = PrepareRawData(inputData);
+
+            // Разделяем текст на части. В Words будут записаны заявители.
+            char[] Separators = { ';' };
+            string[] Words = inputData.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
+            
+            // Проверяем формат.
+            string pattern = @"\p{IsCyrillic}\.\p{IsCyrillic}\. \w+";
+            string name, info;
+            foreach (string str in Words) {
+                name = "";
+                info = "";
+                if (str.IndexOf(",") >= 0) {
+                    name = str.Substring(0, str.IndexOf(",")).Trim();
+                    info = str.Substring(str.IndexOf(",") + 1).Trim();
+                } else {
+                    name = str;
+                }
+                if (Regex.IsMatch(name, pattern)) {
+                    AppealDeclarants.Add(new string[] {name, info});
+                } else {
+                    // Неверный формат
+                    resultData.Add( "Данные не соответствуют формату; " );
+                    return false;
+                }
+            }
+
+            // Ищем в справочнике id каждого заявителя по его имени.
+            bool NewDeclarant;
+            foreach (string[] declarant in AppealDeclarants) {
+                NewDeclarant = true;
+                foreach (string[] str in Declarants) {
+                    if (str[1] == declarant[0]) {
+                        // Заявитель найден в справочнике.
+                        // str[0] - id заявителя.
+                        resultData.Add(str[0]);
+                        NewDeclarant = false;
+                        break;
+                    }
+                }
+                if (NewDeclarant) {
+                    // Заявитель не был найден в справочнике - добавляем с фиктивным ID.
+                    Declarants.Add(new string[] { "fake-" + DeclarantFakeID.ToString(), declarant[0] });
+                    DeclarantFakeID++;
+                }
+            }
             result = true;
+
             return result;
         }
         bool ParseConfirmation(string data, out string parsed) {
@@ -288,9 +367,14 @@ namespace GBConverter {
             if (data == "") {
                 parsed = "Не заполнено обязательное поле; ";
             } else {
-                // Заглушка
-                parsed = "Какое-то подтверждение";
-                result = true;
+                data = PrepareRawData(data);
+                try {
+                    KeyValuePair<string, string> Confirmation = Confirmations.First(s => s.Key == data);
+                    parsed = Confirmation.Value;
+                    result = true;
+                } catch (System.InvalidOperationException) {
+                    parsed = "Сведения не соответствуют классификатору \"Сведения о подтверждении\"; ";
+                }
             }
             return result;
         }
@@ -319,15 +403,30 @@ namespace GBConverter {
 
             return result;
         }
-        bool ParseParty(string data, out string parsed) {
-            bool result = false;
-            if (data == "") {
-                parsed = "Не заполнено обязательное поле; ";
-            } else {
-                // Заглушка
-                parsed = "Какая-то партия";
-                result = true;
+        bool ParseParty(string inputData, out ArrayList resultData) {
+            bool result = true;
+            resultData = new ArrayList();
+            if (inputData == "") {
+                resultData.Add("Не заполнено обязательное поле; ");
+                return false;
             }
+            // Удаляем лишние символы.
+            inputData = PrepareRawData(inputData);
+            // Разделяем текст на части. В Words будут записаны названия субъектов.
+            char[] Separatos = { ';' };
+            string[] Words = inputData.Split(Separatos, StringSplitOptions.RemoveEmptyEntries);
+
+            // Ищем код каждого субъекта по его названию.
+            try {
+                foreach (string str in Words) {
+                    KeyValuePair<string, string> Party = Parties.First(s => s.Key == str.Trim());
+                    resultData.Add(Party.Value);
+                }
+            } catch (System.InvalidOperationException) {
+                result = false;
+                resultData.Add("Тематика не соответствует классификатору \"Тематика\"; ");
+            }
+
             return result;
         }
         bool ParseDeclarantType(string data, out string parsed) {
@@ -335,38 +434,74 @@ namespace GBConverter {
             if (data == "") {
                 parsed = "Не заполнено обязательное поле; ";
             } else {
-                // Заглушка
-                parsed = "Какой-то заявитель";
-                result = true;
+                data = PrepareRawData(data);
+                try {
+                    KeyValuePair<string, string> DecType = DecTypes.First(s => s.Key == data);
+                    parsed = DecType.Value;
+                    result = true;
+                } catch (System.InvalidOperationException) {
+                    parsed = "Тип заявителя не соответствуют классификатору \"Тип заявителей\"; ";
+                }
             }
             return result;
+
         }
         bool ParseExecutor(string data, out string parsed) {
             bool result = false;
             if (data == "") {
                 parsed = "Не заполнено обязательное поле; ";
-            } else {
-                // Заглушка
-                parsed = "Какой-то исполнитель";
-                result = true;
+                return false;
             }
+            data = PrepareRawData(data);
+            string ShortPattern = @"^\w+$";
+            string FullPattern = @"^\w+ \p{IsCyrillic}\.\p{IsCyrillic}\.$";
+
+            if (Regex.IsMatch(data, FullPattern) || Regex.IsMatch(data, ShortPattern)) {
+                // Формат подходит, проверяем наличие в справочнике
+                try {
+                    KeyValuePair<string, string> Executor = Executors.First(s => s.Key == data);
+                    parsed = Executor.Value;
+                    result = true;
+                } catch (System.InvalidOperationException) {
+                    parsed = "Исполнитель не найден в справочнике \"Список исполнителей\"; ";
+                    return false;
+                }
+            } else {
+                parsed = "Данные не соответствуют формату; ";
+            }
+
             return result;
         }
-        bool ParseTheme(string data, out string parsed) {
-            bool result = false;
-            if (data == "") {
-                parsed = "Не заполнено обязательное поле";
-            } else {
-                // Заглушка
-                parsed = "Так себе тема";
-                result = true;
+        bool ParseTheme(string inputData, out ArrayList resultData) {
+            bool result = true;
+            resultData = new ArrayList();
+            if (inputData == "") {
+                resultData.Add("Не заполнено обязательное поле; ");
+                result = false;
             }
+            // Удаляем лишние символы.
+            inputData = PrepareRawData(inputData);
+            // Разделяем текст на части. В Words будут записаны названия субъектов.
+            char[] Separatos = { ';' };
+            string[] Words = inputData.Split(Separatos, StringSplitOptions.RemoveEmptyEntries);
+
+            // Ищем код каждого субъекта по его названию.
+            try {
+                foreach (string str in Words) {
+                    KeyValuePair<string, string> Theme = Themes.First(s => s.Key == str.Trim());
+                    resultData.Add(Theme.Value);
+                }
+            } catch (System.InvalidOperationException) {
+                result = false;
+                resultData.Add("Тематика не соответствует классификатору \"Тематика\"; ");
+            }
+
             return result;
         }
         string PrepareRawData(String data) {
             // Удаляет лишние символы
             string result = Regex.Replace(data, @"\s+", " ");
-            return result;
+            return result.Trim();
         }
         bool LoadDictionaries() {
 
@@ -378,6 +513,7 @@ namespace GBConverter {
             cmd.Connection = conn;
             OracleDataReader dr = null;
             cmd.CommandType = CommandType.Text;
+
             // Субъекты.
             cmd.CommandText = "select namate, subjcod from ate_history where prsubj='1' and datedel is null";
             try {
@@ -388,15 +524,80 @@ namespace GBConverter {
                 conn.Dispose();
                 return false;
             }
-
             while (dr.Read()) {
                 if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
                     Subjects.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
                 }
-                //subjects.FirstOrDefault()
             }
 
+            // Подтверждения.
+            cmd.CommandText = "select content, TO_CHAR(id) from akriko.cls_podtv order by id";
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                cmd.Dispose();
+                conn.Dispose();
+                return false;
+            }
+            while (dr.Read()) {
+                if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
+                    Confirmations.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                }
+            }
 
+            // Тематики.
+            cmd.CommandText = "select REPLACE(numb, '.', ''), TO_CHAR(id) from akriko.cls_tematika order by numb";
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                cmd.Dispose();
+                conn.Dispose();
+                return false;
+            }
+            while (dr.Read()) {
+                if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
+                    Themes.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                }
+            }
+
+            // партии
+            for (int i = 1; i < 75; i++) {
+                Parties.Add(i.ToString(), "1001000" + (100 + i).ToString());
+            }
+
+            // Типы заявителей.
+            cmd.CommandText = "select REPLACE(numb, '.', ''), TO_CHAR(id) from akriko.cls_zayaviteli order by numb";
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                cmd.Dispose();
+                conn.Dispose();
+                return false;
+            }
+            while (dr.Read()) {
+                if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
+                    DecTypes.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                }
+            }
+
+            // Исполнители.
+            cmd.CommandText = "select REPLACE(numb, '.', ''), TO_CHAR(id) from akriko.cls_zayaviteli order by numb";
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                cmd.Dispose();
+                conn.Dispose();
+                return false;
+            }
+            while (dr.Read()) {
+                if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
+                    Executors.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                }
+            }
             dr.Dispose();
             cmd.Dispose();
             conn.Dispose();
