@@ -304,24 +304,47 @@ namespace GBConverter {
             resultData = new ArrayList();
             if (inputData == "") {
                 resultData.Add("Не заполнено обязательное поле; ");
+                return false;
             }
+
             // Удаляем лишние символы.
             inputData = PrepareRawData(inputData);
             // Разделяем текст на части. В Words будут записаны названия субъектов.
-            char[] Separatos = { ';' };
-            string[] Words = inputData.Split(Separatos, StringSplitOptions.RemoveEmptyEntries);
+            char[] EntrySeparators = { ';' };
+            string[] Words = inputData.Split(EntrySeparators, StringSplitOptions.RemoveEmptyEntries);
+            char[] WordSeparators = { ' ', '-', '–' };
 
             // Ищем код каждого субъекта по его названию.
-            try {
-                foreach (string SubjectName in Words) {
-                    KeyValuePair<string, string> Subj = Subjects.First(s => s.Key == SubjectName.Trim());
-                    resultData.Add(Subj.Value);
+            foreach (string AppealSubjectName in Words) {
+                string SubjCode = "";
+                foreach (KeyValuePair<string, string> DirSubj in Subjects) {
+
+                    foreach (string AppealSubjWord in AppealSubjectName.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries)) {
+                        if (DirSubj.Key.Split(WordSeparators, StringSplitOptions.RemoveEmptyEntries).Contains(AppealSubjWord)) {
+                            SubjCode = DirSubj.Value;
+                        } else {
+                            // Слово не найдено в названии субъекта из справочника
+                            SubjCode = "";
+                            break;
+                        }
+                    }
+                    if (SubjCode != "") {
+                        break;
+                    }
                 }
-                result = true;
-            } catch (System.InvalidOperationException) {
-                resultData.Clear();
-                resultData.Add("Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"; ");
+                if (SubjCode != "") {
+                    // Субъект найден
+                    resultData.Add(SubjCode);
+                    break;
+                } else {
+                    resultData.Clear();
+                    resultData.Add("Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"; ");
+                    return false;
+                }
+                //KeyValuePair<string, string> Subj = Subjects.First(s => s.Key == SubjectName.Trim());
+                //resultData.Add(Subj.Value);
             }
+            result = true;
 
             return result;
         }
@@ -562,6 +585,7 @@ namespace GBConverter {
 
             // Субъекты.
             cmd.CommandText = "select namate, subjcod from ate_history where prsubj='1' and datedel is null";
+            //cmd.CommandText = "select namate, subjcod from ate_history where prsubj='1' and datedel is null and subjcod in (16,77)";
             try {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
