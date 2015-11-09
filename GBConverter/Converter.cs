@@ -458,10 +458,6 @@ namespace GBConverter {
         bool ParseParty(string inputData, out ArrayList resultData) {
             bool result = true;
             resultData = new ArrayList();
-            if (inputData == "") {
-                resultData.Add("Не заполнено обязательное поле; ");
-                return false;
-            }
             // Удаляем лишние символы.
             inputData = PrepareRawData(inputData);
             // Разделяем текст на части. В Words будут записаны названия субъектов.
