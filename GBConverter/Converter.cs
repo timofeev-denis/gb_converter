@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -80,6 +81,13 @@ namespace GBConverter {
                                 appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].InsertParagraph("");
                                 p = appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].InsertParagraph();
                             }
+                            if (msg.Column > 0) {
+                                Color violetColor = Color.FromArgb(204, 0, 153);
+                                //p.Color(violetColor);
+                                foreach (Paragraph ColorParagraph in appealsTable.Rows[rowIndex].Cells[msg.Column].Paragraphs) {
+                                    ColorParagraph.Color(violetColor);
+                                }
+                            }
                             p.Append(msg.Message);
                             p.Bold();
                             p.FontSize(10);
@@ -148,7 +156,7 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add(new ErrorMessage("Субъект Российской Федерации: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Субъект Российской Федерации: ", MessageType.Header, colIndex));
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
                                 errors.Add(new ErrorMessage(str, MessageType.Text));
@@ -161,7 +169,7 @@ namespace GBConverter {
                             NewAppeal.content = tmp;
                         } else {
                             result = false;
-                            errors.Add(new ErrorMessage("Содержание: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Содержание: ", MessageType.Header, colIndex));
                             errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
@@ -175,7 +183,7 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add(new ErrorMessage("Кем заявлено: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Кем заявлено: ", MessageType.Header, colIndex));
 
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
@@ -189,7 +197,7 @@ namespace GBConverter {
                             NewAppeal.confirmation = tmp;
                         } else {
                             result = false;
-                            errors.Add(new ErrorMessage("Сведения о подтверждении: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Сведения о подтверждении: ", MessageType.Header, colIndex));
                             errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
@@ -199,7 +207,7 @@ namespace GBConverter {
                             NewAppeal.measures = tmp;
                         } else {
                             result = false;
-                            errors.Add(new ErrorMessage("Приянтые меры: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Приянтые меры: ", MessageType.Header, colIndex));
                             errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
@@ -213,7 +221,7 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add(new ErrorMessage("Рег. номер и дата: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Рег. номер и дата: ", MessageType.Header, colIndex));
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
                                 errors.Add(new ErrorMessage(str, MessageType.Text));
@@ -230,7 +238,7 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add(new ErrorMessage("Партия: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Партия: ", MessageType.Header, colIndex));
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
                                 errors.Add(new ErrorMessage(str, MessageType.Text));
@@ -244,7 +252,7 @@ namespace GBConverter {
                             NewAppeal.declarant_type = tmp;
                         } else {
                             result = false;
-                            errors.Add(new ErrorMessage("Тип заявителя: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Тип заявителя: ", MessageType.Header, colIndex));
                             errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
 
@@ -258,7 +266,7 @@ namespace GBConverter {
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
-                            errors.Add(new ErrorMessage("Тематика: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Тематика: ", MessageType.Header, colIndex));
 
                             // Добавляем все сообщения об ошибках в errors.
                             foreach (string str in cellParsedValues) {
@@ -273,7 +281,7 @@ namespace GBConverter {
                             NewAppeal.executor_id = tmp;
                         } else {
                             result = false;
-                            errors.Add(new ErrorMessage("Исполнитель: ", MessageType.Header));
+                            errors.Add(new ErrorMessage("Исполнитель: ", MessageType.Header, colIndex));
                             errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
                         break;
@@ -742,10 +750,12 @@ namespace GBConverter {
     class ErrorMessage {
         public readonly string Message;
         public readonly MessageType Type;
+        public readonly int Column;
 
-        public ErrorMessage(string msg, MessageType t) {
+        public ErrorMessage(string msg, MessageType t, int c = -1) {
             this.Message = msg;
             this.Type = t;
+            this.Column = c;
         }
     }
 }
