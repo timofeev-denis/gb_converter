@@ -55,6 +55,9 @@ namespace GBConverter {
             Table appealsTable = document.Tables[0];
 
             // Добавляем колонку с информацией о выявленных несоответствиях по обращению (результат проверки).
+            if (appealsTable.ColumnCount > RESULT_COLUMN) {
+                appealsTable.RemoveColumn(RESULT_COLUMN);
+            }
             appealsTable.InsertColumn();
             appealsTable.Rows[0].Cells[RESULT_COLUMN].VerticalAlignment = VerticalAlignment.Top;
             Paragraph p = appealsTable.Rows[0].Cells[RESULT_COLUMN].Paragraphs[0].Append("Выявленные несоответствия данных (для конвертации)");
@@ -585,7 +588,6 @@ namespace GBConverter {
 
             // Субъекты.
             cmd.CommandText = "select namate, subjcod from ate_history where prsubj='1' and datedel is null";
-            //cmd.CommandText = "select namate, subjcod from ate_history where prsubj='1' and datedel is null and subjcod in (16,77)";
             try {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
@@ -654,7 +656,6 @@ namespace GBConverter {
             }
 
             // Исполнители.
-            //cmd.CommandText = "select REPLACE(numb, '.', ''), TO_CHAR(id) from akriko.cls_zayaviteli order by numb";
             cmd.CommandText = "select l_name, TO_CHAR(id) from akriko.cat_executors order by l_name";
             try {
                 dr = cmd.ExecuteReader();
