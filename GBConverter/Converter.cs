@@ -578,9 +578,24 @@ namespace GBConverter {
             return result.Trim();
         }
         bool LoadDictionaries() {
-            string oradb = "Data Source=RA00C000;User Id=voshod;Password=voshod;";
-            OracleConnection conn = new OracleConnection(oradb);
-            conn.Open();
+            string[] args = Environment.GetCommandLineArgs();
+            string DBName = "RA00C000";
+            string DBUser = "voshod";
+            string DBPass = "voshod";
+            if (args.Length > 3) {
+                DBName = args[1];
+                DBUser = args[2];
+                DBPass = args[3];
+            }
+            string oradb = "Data Source=" + DBName + ";User Id=" + DBUser + ";Password=" + DBPass + ";";
+            OracleConnection conn = null;
+            try {
+                conn = new OracleConnection(oradb);
+                conn.Open();
+            } catch (Exception e) {
+                MessageBox.Show("Не удалось подключиться к базе данных.\n" + e.Message, "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return false;
+            }
             OracleCommand cmd = new OracleCommand();
             cmd.Connection = conn;
             OracleDataReader dr = null;

@@ -13,6 +13,13 @@ namespace GBConverter {
         public MainForm() {
             InitializeComponent();
             CenterToScreen();
+            Console.Write("Super!");
+            /*
+            string[] args = Environment.GetCommandLineArgs();
+            foreach (string s in args) {
+                Console.WriteLine(s);
+            }
+             * */
         }
 
         private void exitButton_Click(object sender, EventArgs e) {
@@ -22,7 +29,6 @@ namespace GBConverter {
         private void openFileButton_Click(object sender, EventArgs e) {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == DialogResult.OK) {
-                //MessageBox.Show(openFileDialog.FileNames[0]);
                 Converter converter = new Converter();
                 converter.Convert(openFileDialog.FileNames[0], progressBar);
             }
