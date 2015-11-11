@@ -305,6 +305,9 @@ namespace GBConverter {
             }
             return result;
         }
+        bool CreateAppeal(Appeal newAppeal) {
+            return true;
+        }
         bool ParseSubject(string inputData, out ArrayList resultData) {
             bool result = false;
             resultData = new ArrayList();
@@ -669,9 +672,80 @@ namespace GBConverter {
             }
 
             // Партии.
-            for (int i = 1; i < 75; i++) {
-                Parties.Add(i.ToString(), "1001000" + (100 + i).ToString());
-            }
+            Parties.Add("1", "199199934542");
+            Parties.Add("2", "199199934548");
+            Parties.Add("3", "199199934551");
+            Parties.Add("4", "199199934589");
+            Parties.Add("5", "199199934555");
+            Parties.Add("6", "199199934553");
+            Parties.Add("7", "100100023740549");
+            Parties.Add("8", "100100035781415");
+            Parties.Add("9", "100100035780274");
+            Parties.Add("10", "100100035780277");
+            Parties.Add("11", "100100035781337");
+            Parties.Add("12", "100100035781340");
+            Parties.Add("13", "100100035781343");
+            Parties.Add("14", "100100035781346");
+            Parties.Add("15", "100100035781412");
+            Parties.Add("16", "100100035781409");
+            Parties.Add("17", "100100035784336");
+            Parties.Add("18", "100100035784351");
+            Parties.Add("19", "100100035784345");
+            Parties.Add("20", "100100035784718");
+            Parties.Add("21", "100100035786299");
+            Parties.Add("22", "100100035786293");
+            Parties.Add("23", "100100035786227");
+            Parties.Add("24", "100100035786290");
+            Parties.Add("25", "100100035786296");
+            Parties.Add("26", "100100035786308");
+            Parties.Add("27", "100100035786317");
+            Parties.Add("28", "100100035786311");
+            Parties.Add("29", "100100035786314");
+            Parties.Add("30", "100100039749981");
+            Parties.Add("31", "100100035786305");
+            Parties.Add("32", "100100039750663");
+            Parties.Add("33", "100100035790815");
+            Parties.Add("34", "100100039749991");
+            Parties.Add("35", "100100047868079");
+            Parties.Add("36", "100100048439721");
+            Parties.Add("37", "100100049142028");
+            Parties.Add("38", "100100048439595");
+            Parties.Add("39", "100100035790826");
+            Parties.Add("40", "100100042277558");
+            Parties.Add("41", "100100048439556");
+            Parties.Add("42", "100100047878147");
+            Parties.Add("43", "100100048439599");
+            Parties.Add("44", "100100047868051");
+            Parties.Add("45", "100100047878141");
+            Parties.Add("46", "100100048439836");
+            Parties.Add("47", "100100047878144");
+            Parties.Add("48", "100100048439783");
+            Parties.Add("49", "100100049649307");
+            Parties.Add("50", "100100042277551");
+            Parties.Add("51", "100100048442301");
+            Parties.Add("52", "100100048442433");
+            Parties.Add("53", "100100049141914");
+            Parties.Add("54", "100100049282480");
+            Parties.Add("55", "100100047878150");
+            Parties.Add("56", "100100049649313");
+            Parties.Add("57", "100100049100931");
+            Parties.Add("58", "100100049649304");
+            Parties.Add("59", "100100049141955");
+            Parties.Add("60", "100100049649316");
+            Parties.Add("61", "100100049282369");
+            Parties.Add("62", "100100049282372");
+            Parties.Add("63", "100100049691927");
+            Parties.Add("64", "100100049735668");
+            Parties.Add("65", "100100049282484");
+            Parties.Add("66", "100100051160839");
+            Parties.Add("67", "100100051161302");
+            Parties.Add("68", "100100051161305");
+            Parties.Add("69", "100100051348825");
+            Parties.Add("70", "100100052561221");
+            Parties.Add("71", "100100052080030");
+            Parties.Add("72", "100100052561217");
+            Parties.Add("73", "100100053307143");
+            Parties.Add("74", "100100054451488");
 
             // Типы заявителей.
             cmd.CommandText = "select REPLACE(numb, '.', ''), TO_CHAR(id) from akriko.cls_zayaviteli order by numb";
