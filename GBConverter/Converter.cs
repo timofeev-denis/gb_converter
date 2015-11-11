@@ -84,13 +84,16 @@ namespace GBConverter {
                                 appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].InsertParagraph("");
                                 p = appealsTable.Rows[rowIndex].Cells[RESULT_COLUMN].InsertParagraph();
                             }
+                            /*
                             if (msg.Column > 0) {
                                 Color violetColor = Color.FromArgb(204, 0, 153);
-                                //p.Color(violetColor);
                                 foreach (Paragraph ColorParagraph in appealsTable.Rows[rowIndex].Cells[msg.Column].Paragraphs) {
-                                    ColorParagraph.Color(violetColor);
+                                    if (ColorParagraph.Text.Trim() != "") {
+                                        ColorParagraph.Color(violetColor);
+                                    }
                                 }
                             }
+                            */
                             p.Append(msg.Message);
                             p.Bold();
                             p.FontSize(10);
@@ -533,7 +536,10 @@ namespace GBConverter {
             if (Regex.IsMatch(data, FullPattern) || Regex.IsMatch(data, ShortPattern)) {
                 // Формат подходит, проверяем наличие в справочнике
                 try {
-                    KeyValuePair<string, string> Executor = Executors.First(s => s.Key == data);
+                    if(data.IndexOf(' ' ) >= 0) {
+                        data = data.Substring(0, data.IndexOf(' '));
+                    }
+                    KeyValuePair<string, string> Executor = Executors.First(s => s.Key == data.ToLower());
                     parsed = Executor.Value;
                     result = true;
                 } catch (System.InvalidOperationException) {
@@ -613,7 +619,11 @@ namespace GBConverter {
             }
             while (dr.Read()) {
                 if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
-                    Subjects.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    try {
+                        Subjects.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    } catch (Exception e) {
+                        MessageBox.Show(dr.GetString(0).Trim(), "Найден дубликат субъекта");
+                    }
                 }
             }
 
@@ -629,7 +639,12 @@ namespace GBConverter {
             }
             while (dr.Read()) {
                 if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
-                    Confirmations.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    try {
+                        Confirmations.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    } catch (Exception e) {
+                        MessageBox.Show(dr.GetString(0).Trim(), "Найден дубликат подтверждения");
+                    }
+
                 }
             }
 
@@ -645,7 +660,11 @@ namespace GBConverter {
             }
             while (dr.Read()) {
                 if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
-                    Themes.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    try { 
+                        Themes.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    } catch (Exception e) {
+                        MessageBox.Show(dr.GetString(0).Trim(), "Найден дубликат тематики");
+                    }
                 }
             }
 
@@ -666,12 +685,18 @@ namespace GBConverter {
             }
             while (dr.Read()) {
                 if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
-                    DecTypes.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    try { 
+                        DecTypes.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    } catch (Exception e) {
+                        MessageBox.Show(dr.GetString(0).Trim(), "Найден дубликат типа заявителя");
+                    }
+
                 }
             }
 
             // Исполнители.
-            cmd.CommandText = "select l_name, TO_CHAR(id) from akriko.cat_executors order by l_name";
+            
+            cmd.CommandText = "select lower(l_name), TO_CHAR(id) from akriko.cat_executors where TO_CHAR(id) like '100%' order by l_name";
             try {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
@@ -682,9 +707,66 @@ namespace GBConverter {
             }
             while (dr.Read()) {
                 if (!dr.IsDBNull(0) && !dr.IsDBNull(1)) {
-                    Executors.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                    try { 
+                        Executors.Add(dr.GetString(0).Trim(), dr.GetString(1).Trim());
+                        //File.AppendAllText(@".\log.txt", "executor - " + dr.GetString(0).Trim() + "\r\n");
+                    } catch (Exception e) {
+                        MessageBox.Show(dr.GetString(0).Trim(), "Найден дубликат исполнителя");
+                    }
+
                 }
             }
+             
+
+            /*
+            Executors.Add("Алёшкин", "1");
+            Executors.Add("Аракелян", "2");
+            Executors.Add("Артамошкин", "3");
+            Executors.Add("Белых", "4");
+            Executors.Add("Бородулина", "5");
+            Executors.Add("Воронин", "6");
+            Executors.Add("Ермаков", "7");
+            Executors.Add("Котомкин", "8");
+            Executors.Add("Кубелун", "9");
+            Executors.Add("Мешков", "10");
+            Executors.Add("Неронов", "11");
+            Executors.Add("Орловская", "12");
+            Executors.Add("Пеетухов", "13");
+            Executors.Add("Петурова", "14");
+            Executors.Add("Петухоов", "15");
+            Executors.Add("Попов", "16");
+            Executors.Add("Симонова", "17");
+            Executors.Add("соломонидина", "18");
+            Executors.Add("Сомов", "19");
+            Executors.Add("Соомов", "20");
+            Executors.Add("Стоноженко", "21");
+            Executors.Add("Токмачев", "22");
+            Executors.Add("Тюняеева", "23");
+            Executors.Add("Цветкова", "24");
+            Executors.Add("Цветкоова", "25");
+            Executors.Add("Чувина", "26");
+            Executors.Add("Шеншин", "27");
+            Executors.Add("артамошкин", "28");
+            Executors.Add("афанасова", "29");
+            Executors.Add("бабак", "30");
+            Executors.Add("булгаков", "31");
+            Executors.Add("егоров", "32");
+            Executors.Add("захаров", "33");
+            Executors.Add("копосов", "34");
+            Executors.Add("кузяков", "35");
+            Executors.Add("луценко", "36");
+            Executors.Add("лученко", "37");
+            Executors.Add("осадчая", "38");
+            Executors.Add("поспеловская", "39");
+            Executors.Add("пугачева", "40");
+            Executors.Add("романова", "41");
+            Executors.Add("стоноженко", "42");
+            Executors.Add("тюняева", "43");
+            Executors.Add("федотова", "44");
+            Executors.Add("фуфаева", "45");
+            Executors.Add("черкашина", "46");
+            Executors.Add("якшина", "47");
+            */
             dr.Dispose();
             cmd.Dispose();
             conn.Dispose();
