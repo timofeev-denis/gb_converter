@@ -385,7 +385,8 @@ namespace GBConverter {
             string[] Words = inputData.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
             
             // Проверяем формат.
-            string pattern = @"\p{IsCyrillic}\.\p{IsCyrillic}\. \w+";
+            string FullPattern = @"\p{IsCyrillic}\.\p{IsCyrillic}\. \w+";
+            string ShortPattern = @"\p{IsCyrillic}\. \w+";
             string name, info;
             foreach (string str in Words) {
                 name = "";
@@ -396,7 +397,7 @@ namespace GBConverter {
                 } else {
                     name = str;
                 }
-                if (Regex.IsMatch(name, pattern)) {
+                if (name.ToLower() == "коллективное обращение" || Regex.IsMatch(name, FullPattern) || Regex.IsMatch(name, ShortPattern)) {
                     AppealDeclarants.Add(new string[] {name, info});
                 } else {
                     // Неверный формат
