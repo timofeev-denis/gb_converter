@@ -505,7 +505,7 @@ namespace GBConverter {
                 }
             } catch (System.InvalidOperationException) {
                 result = false;
-                resultData.Add("Тематика не соответствует классификатору \"Тематика\"; ");
+                resultData.Add("Значение не найдено в справочнике \"Общественные объединения\"; ");
             }
 
             return result;
