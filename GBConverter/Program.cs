@@ -7,7 +7,7 @@ using System.Windows.Forms;
 namespace GBConverter {
     static class Program {
         /// <summary>
-        /// The main entry point for the application.
+        /// Конвертер "Зелёной книги" АКРИКО.
         /// </summary>
         [STAThread]
         static void Main() {

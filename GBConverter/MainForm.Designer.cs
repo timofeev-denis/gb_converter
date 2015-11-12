@@ -24,31 +24,31 @@
         /// </summary>
         private void InitializeComponent() {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            this.openFileButton = new System.Windows.Forms.Button();
-            this.exitButton = new System.Windows.Forms.Button();
+            this.OpenFileButton = new System.Windows.Forms.Button();
+            this.ExitButton = new System.Windows.Forms.Button();
             this.progressBar = new System.Windows.Forms.ProgressBar();
-            this.button1 = new System.Windows.Forms.Button();
+            this.ConvertButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
-            // openFileButton
+            // OpenFileButton
             // 
-            this.openFileButton.Location = new System.Drawing.Point(12, 110);
-            this.openFileButton.Name = "openFileButton";
-            this.openFileButton.Size = new System.Drawing.Size(108, 23);
-            this.openFileButton.TabIndex = 0;
-            this.openFileButton.Text = "Выбрать файл";
-            this.openFileButton.UseVisualStyleBackColor = true;
-            this.openFileButton.Click += new System.EventHandler(this.openFileButton_Click);
+            this.OpenFileButton.Location = new System.Drawing.Point(12, 110);
+            this.OpenFileButton.Name = "OpenFileButton";
+            this.OpenFileButton.Size = new System.Drawing.Size(108, 23);
+            this.OpenFileButton.TabIndex = 0;
+            this.OpenFileButton.Text = "Выбрать файл";
+            this.OpenFileButton.UseVisualStyleBackColor = true;
+            this.OpenFileButton.Click += new System.EventHandler(this.OpenFileButton_Click);
             // 
-            // exitButton
+            // ExitButton
             // 
-            this.exitButton.Location = new System.Drawing.Point(259, 110);
-            this.exitButton.Name = "exitButton";
-            this.exitButton.Size = new System.Drawing.Size(72, 23);
-            this.exitButton.TabIndex = 2;
-            this.exitButton.Text = "Выход";
-            this.exitButton.UseVisualStyleBackColor = true;
-            this.exitButton.Click += new System.EventHandler(this.exitButton_Click);
+            this.ExitButton.Location = new System.Drawing.Point(259, 110);
+            this.ExitButton.Name = "ExitButton";
+            this.ExitButton.Size = new System.Drawing.Size(72, 23);
+            this.ExitButton.TabIndex = 2;
+            this.ExitButton.Text = "Выход";
+            this.ExitButton.UseVisualStyleBackColor = true;
+            this.ExitButton.Click += new System.EventHandler(this.ExitButton_Click);
             // 
             // progressBar
             // 
@@ -57,38 +57,40 @@
             this.progressBar.Size = new System.Drawing.Size(319, 23);
             this.progressBar.TabIndex = 3;
             // 
-            // button1
+            // ConvertButton
             // 
-            this.button1.Enabled = false;
-            this.button1.Location = new System.Drawing.Point(126, 110);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(108, 23);
-            this.button1.TabIndex = 4;
-            this.button1.Text = "Конвертировать";
-            this.button1.UseVisualStyleBackColor = true;
+            this.ConvertButton.Enabled = false;
+            this.ConvertButton.Location = new System.Drawing.Point(126, 110);
+            this.ConvertButton.Name = "ConvertButton";
+            this.ConvertButton.Size = new System.Drawing.Size(108, 23);
+            this.ConvertButton.TabIndex = 4;
+            this.ConvertButton.Text = "Конвертировать";
+            this.ConvertButton.UseVisualStyleBackColor = true;
+            this.ConvertButton.Click += new System.EventHandler(this.ConvertButton_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(343, 145);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.ConvertButton);
             this.Controls.Add(this.progressBar);
-            this.Controls.Add(this.exitButton);
-            this.Controls.Add(this.openFileButton);
+            this.Controls.Add(this.ExitButton);
+            this.Controls.Add(this.OpenFileButton);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainForm";
             this.Text = "Конвертер \"Зелёной книги\"";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.ResumeLayout(false);
 
         }
 
         #endregion
 
-        private System.Windows.Forms.Button openFileButton;
-        private System.Windows.Forms.Button exitButton;
+        private System.Windows.Forms.Button OpenFileButton;
+        private System.Windows.Forms.Button ExitButton;
         private System.Windows.Forms.ProgressBar progressBar;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button ConvertButton;
     }
 }
 

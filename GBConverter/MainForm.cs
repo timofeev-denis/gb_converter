@@ -10,27 +10,37 @@ using System.Windows.Forms;
 
 namespace GBConverter {
     public partial class MainForm : Form {
+        private Converter converter;
+
         public MainForm() {
             InitializeComponent();
             CenterToScreen();
-            Console.Write("Super!");
-            /*
-            string[] args = Environment.GetCommandLineArgs();
-            foreach (string s in args) {
-                Console.WriteLine(s);
-            }
-             * */
         }
 
-        private void exitButton_Click(object sender, EventArgs e) {
+        private void ExitButton_Click(object sender, EventArgs e) {
             Close();
         }
 
-        private void openFileButton_Click(object sender, EventArgs e) {
+        private void OpenFileButton_Click(object sender, EventArgs e) {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == DialogResult.OK) {
-                Converter converter = new Converter();
-                converter.Convert(openFileDialog.FileNames[0], progressBar);
+                this.converter = new Converter();
+                if (this.converter.CheckFile(openFileDialog.FileNames[0], progressBar)) {
+                    MessageBox.Show("Несоответствий не выявлено.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    this.ConvertButton.Enabled = true;
+                }
+            }
+        }
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
+            DB.CloseConnection();
+        }
+
+        private void ConvertButton_Click(object sender, EventArgs e) {
+            if (this.converter.Convert(progressBar)) {
+                MessageBox.Show("Конвертация завершена.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            } else {
+                MessageBox.Show("Во время конвертации возникла ошибка.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
         }
     }

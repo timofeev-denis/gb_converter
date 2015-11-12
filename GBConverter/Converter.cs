@@ -27,22 +27,25 @@ namespace GBConverter {
         Dictionary<string, string> Executors = new Dictionary<string, string>();
         List<string[]> Declarants = new System.Collections.Generic.List<string[]>();
         long DeclarantFakeID = 1;
+        private ArrayList SimpleAppeals = new ArrayList();
+        private DateTime ConvertDate;
 
         static void _t(String str) {
             System.Diagnostics.Trace.WriteLine(str);
         }
 
-        public void Convert(string fileName, ProgressBar progressBar = null) {
+        public bool CheckFile(string fileName, ProgressBar progressBar = null) {
+            bool result = false;
             if (fileName == "") {
                 throw new ArgumentException("Не указано имя файла для конвертации");
             }
             // Загружаем справочники из БД
             if (!this.LoadDictionaries()) {
-                return;
+                return false;
             }
 
             ArrayList RowErrors = new ArrayList();
-            ArrayList SimpleAppeals = new ArrayList();
+            this.SimpleAppeals.Clear();
             DocX document;
             try {
                 // Открываем файл с "ЗЕлёной книгой".
@@ -50,7 +53,7 @@ namespace GBConverter {
             } catch (System.IO.IOException e) {
                 MessageBox.Show(String.Format("Не удалось открыть файл {0}.\nВозможно он используется другой программой.\n\nРабота программы прекращена.", fileName),
                     "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
+                return false;
             }
             Table appealsTable = document.Tables[0];
 
@@ -68,9 +71,7 @@ namespace GBConverter {
 
             // Анализируем все строки таблицы.
             for (int rowIndex = 1; rowIndex < appealsTable.Rows.Count; rowIndex++) {
-                if (CheckAppeal(appealsTable.Rows[rowIndex], SimpleAppeals, out RowErrors)) {
-                    // Проверка обращения прошла успешно.
-                } else {
+                if (!CheckAppeal(appealsTable.Rows[rowIndex], SimpleAppeals, out RowErrors)) {
                     // Проверка обращения завершилась с ошибками.
                     Step2 = false;
                     bool FirstError = true;
@@ -105,19 +106,23 @@ namespace GBConverter {
                         }
                     }
                 }
-                double percent = (double) rowIndex / (appealsTable.Rows.Count - 1) * 100;
-                progressBar.Value = System.Convert.ToInt32(percent);
+                if (progressBar != null) {
+                    double percent = (double)rowIndex / (appealsTable.Rows.Count - 1) * 100;
+                    progressBar.Value = System.Convert.ToInt32(percent);
+                }
             }
 
             if (Step2) {
-                // Переходим ко второму этапу - запись в БД
-                MessageBox.Show("Несоответствий не выявлено.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // Несоответствий не выявлено.
+                result = true;
             } else {
                 string filePath = Path.GetDirectoryName(fileName) + @"\Ошибки конвертации " + (DateTime.Now).ToString("yyyy-MM-dd-HH-mm-ss") + ".docx";
                 document.SaveAs(filePath);
                 System.Diagnostics.Process.Start(filePath);
+                result = false;
             }
             document.Dispose();
+            return result;
             // System.Diagnostics.Trace.WriteLine((DateTime.Now).ToString( "yyyy-MM-dd-H-mm-ss" ));
         }
         /// <summary>
@@ -306,7 +311,135 @@ namespace GBConverter {
             return result;
         }
         bool CreateAppeal(Appeal newAppeal) {
+            OracleConnection conn = DB.GetConnection();
+            OracleCommand cmd = new OracleCommand();
+            cmd.Connection = conn;
+            OracleDataReader dr = null;
+            cmd.CommandType = CommandType.Text;
+/*
+            String query = "insert into AKRIKO.APPEAL " +
+                "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
+                " VALUES (@id, @numb,  @f_date,  @hod_ispoln,  @is_control,  @is_repeat,  @podtv,  @subjcode,  @is_sud,  @is_collective,  @replicate_need,  @created,  @unread,  @meri_cik,  @links,  @sud_tematika,  @content_cik,  @ispolnitel_cik_id,  @del,  @only_sud)";
+*/
+            
+            String query = "insert into AKRIKO.APPEAL " +
+                "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
+                " VALUES ( CONCAT(:idprefix, LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')), :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
+            
+            /*
+            String query = "INSERT INTO akriko.appeal " +
+                "(id, is_control, is_repeat, IS_SUD, IS_COLLECTIVE, UNREAD) " +
+                " VALUES (CONCAT('1' || :newid, LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')), :tmp, :tmp, :tmp, :tmp, :tmp )";
+            */
+            OracleCommand command = new OracleCommand(query, conn);
+            //command.Parameters.Add(":newid", "77");
+            //command.Parameters.Add(":tmp", "0");
+
+            command.Parameters.Add(":idprefix", "1" + newAppeal.subjcode);
+            command.Parameters.Add(":numb", newAppeal.numb);
+            command.Parameters.Add(":f_date", newAppeal.f_date);
+            //command.Parameters.Add(":f_date", this.ConvertDate);
+            command.Parameters.Add(":hod_ispoln", "0");
+            command.Parameters.Add(":is_control", "0");
+            command.Parameters.Add(":is_repeat", "0");
+            command.Parameters.Add(":podtv", newAppeal.confirmation);
+            //command.Parameters.Add(":subjcode", Int32.Parse(newAppeal.subjcode));
+            command.Parameters.Add(":subjcode", "77");
+            command.Parameters.Add(":is_sud", "0");
+            command.Parameters.Add(":is_collective", "0");
+            command.Parameters.Add(":replicate_need", "0");
+            command.Parameters.Add(":created", this.ConvertDate);
+            command.Parameters.Add(":unread", "1");
+            command.Parameters.Add(":meri_cik", newAppeal.measures);
+            command.Parameters.Add(":links", "0");
+            command.Parameters.Add(":sud_tematika", "0");
+            command.Parameters.Add(":content_cik", newAppeal.content);
+            command.Parameters.Add(":ispolnitel_cik_id", newAppeal.executor_id);
+            command.Parameters.Add(":del", "0");
+            command.Parameters.Add(":only_sud", "0");
+            
+            command.ExecuteNonQuery();
+            command.Dispose();
+
+            /*
+            insert into AKRIKO.APPEAL (
+                id, 
+                numb, 
+                f_date, 
+                hod_ispoln,
+                IS_CONTROL,
+                IS_REPEAT,
+                PODTV,
+                SUBJCODE,
+                IS_SUD,
+                IS_COLLECTIVE,
+                REPLICATE_NEED,
+                CREATED,
+                UNREAD,
+                MERI_CIK,
+                LINKS,
+                SUD_TEMATIKA,
+                CONTENT_CIK,
+                ISPOLNITEL_CIK_ID,
+                DEL,
+                ONLY_SUD
+                 ) 
+            VALUES (
+                CONCAT('106', LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0') ),
+                '1988',         -- (!) numb
+                '11.10.2015',   -- (!) f_date
+                '0',            -- hod_ispoln
+                '0',            -- IS_CONTROL
+                '0',            -- IS_REPEAT
+                '1',            -- (!) PODTV
+                '6',            -- (!) SUBJCODE,
+                '0',            -- IS_SUD,
+                '0',            -- IS_COLLECTIVE,
+                '0',            -- REPLICATE_NEED,
+                SYSDATE,        -- CREATED,
+                '1',            -- UNREAD,
+                'Принятые меры',-- (!) MERI_CIK,
+                '0',            -- LINKS,
+                '0',            -- SUD_TEMATIKA,
+                'Содержание',   -- (!) CONTENT_CIK,
+                '1000000061',   -- (!) ISPOLNITEL_CIK_ID
+                '0',            -- DEL,
+                '0'             -- ONLY_SUD
+            );
+             */
+
+            /*
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                cmd.Dispose();
+                DB.CloseConnection();
+                return false;
+            }
+            */ 
+
             return true;
+        }
+        public bool Convert(ProgressBar progressBar = null) {
+            if (progressBar != null) {
+                progressBar.Value = 0;
+            }
+            bool result = true;
+            int AppealIndex = 1;
+            // Запоминаем текущую дату и время, чтобы установить их всем создаваемым обращениям.
+            this.ConvertDate = new DateTime();
+            foreach (Appeal NewAppeal in this.SimpleAppeals) {
+                if (!CreateAppeal(NewAppeal)) {
+                    result = false;
+                }
+                if (progressBar != null) {
+                    double percent = (double)AppealIndex / this.SimpleAppeals.Count * 100;
+                    progressBar.Value = System.Convert.ToInt32(percent);
+                }
+                AppealIndex++;
+            }
+            return result;
         }
         bool ParseSubject(string inputData, out ArrayList resultData) {
             bool result = false;
@@ -482,7 +615,7 @@ namespace GBConverter {
                     return false;
                 }
                 num = trimmed.Substring(0, trimmed.IndexOf(" от ")).Trim();
-                f_date = trimmed.Substring(trimmed.IndexOf(" от ") + 1).Trim();
+                f_date = trimmed.Substring(trimmed.IndexOf(" от ") + 4).Trim();
                 resultData.Add(Tuple.Create(num, f_date));
             }
             return true;
@@ -587,24 +720,8 @@ namespace GBConverter {
             return result.Trim();
         }
         bool LoadDictionaries() {
-            string[] args = Environment.GetCommandLineArgs();
-            string DBName = "RA00C000";
-            string DBUser = "voshod";
-            string DBPass = "voshod";
-            if (args.Length > 3) {
-                DBName = args[1];
-                DBUser = args[2];
-                DBPass = args[3];
-            }
-            string oradb = "Data Source=" + DBName + ";User Id=" + DBUser + ";Password=" + DBPass + ";";
-            OracleConnection conn = null;
-            try {
-                conn = new OracleConnection(oradb);
-                conn.Open();
-            } catch (Exception e) {
-                MessageBox.Show("Не удалось подключиться к базе данных.\n" + e.Message, "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return false;
-            }
+            OracleConnection conn = DB.GetConnection();
+
             OracleCommand cmd = new OracleCommand();
             cmd.Connection = conn;
             OracleDataReader dr = null;
@@ -617,7 +734,7 @@ namespace GBConverter {
             } catch (Oracle.DataAccess.Client.OracleException e) {
                 _t(e.Message.ToString());
                 cmd.Dispose();
-                conn.Dispose();
+                DB.CloseConnection();
                 return false;
             }
             while (dr.Read()) {
@@ -637,7 +754,7 @@ namespace GBConverter {
             } catch (Oracle.DataAccess.Client.OracleException e) {
                 _t(e.Message.ToString());
                 cmd.Dispose();
-                conn.Dispose();
+                DB.CloseConnection();
                 return false;
             }
             while (dr.Read()) {
@@ -658,7 +775,7 @@ namespace GBConverter {
             } catch (Oracle.DataAccess.Client.OracleException e) {
                 _t(e.Message.ToString());
                 cmd.Dispose();
-                conn.Dispose();
+                DB.CloseConnection();
                 return false;
             }
             while (dr.Read()) {
@@ -754,7 +871,7 @@ namespace GBConverter {
             } catch (Oracle.DataAccess.Client.OracleException e) {
                 _t(e.Message.ToString());
                 cmd.Dispose();
-                conn.Dispose();
+                DB.CloseConnection();
                 return false;
             }
             while (dr.Read()) {
@@ -776,7 +893,7 @@ namespace GBConverter {
             } catch (Oracle.DataAccess.Client.OracleException e) {
                 _t(e.Message.ToString());
                 cmd.Dispose();
-                conn.Dispose();
+                DB.CloseConnection();
                 return false;
             }
             while (dr.Read()) {
@@ -843,7 +960,7 @@ namespace GBConverter {
             */
             dr.Dispose();
             cmd.Dispose();
-            conn.Dispose();
+            //DB.CloseConnection();
 
 
             // DB emulation :)
