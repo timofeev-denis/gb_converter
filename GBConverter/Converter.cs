@@ -503,7 +503,8 @@ namespace GBConverter {
             string[] Words = inputData.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
             
             // Проверяем формат.
-            string pattern = @"\p{IsCyrillic}\.\p{IsCyrillic}\. \w+";
+            string FullPattern = @"\p{IsCyrillic}\.\p{IsCyrillic}\. \w+";
+            string ShortPattern = @"\p{IsCyrillic}\. \w+";
             string name, info;
             foreach (string str in Words) {
                 name = "";
@@ -514,7 +515,7 @@ namespace GBConverter {
                 } else {
                     name = str;
                 }
-                if (Regex.IsMatch(name, pattern)) {
+                if (name.ToLower() == "коллективное обращение" || Regex.IsMatch(name, FullPattern) || Regex.IsMatch(name, ShortPattern)) {
                     AppealDeclarants.Add(new string[] {name, info});
                 } else {
                     // Неверный формат
@@ -589,7 +590,7 @@ namespace GBConverter {
             string[] Words = inputData.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
 
             // Проверяем формат.
-            string pattern = @"^\w+ от \d{1,2}\.\d{1,2}\.\d{4}$";
+            string pattern = @"^[а-яА-Я0-9\./-]+ от \d{1,2}\.\d{1,2}\.\d{4}$";
             string num, f_date;
             string trimmed;
             foreach (string str in Words) {
@@ -622,7 +623,7 @@ namespace GBConverter {
                 }
             } catch (System.InvalidOperationException) {
                 result = false;
-                resultData.Add("Тематика не соответствует классификатору \"Тематика\"; ");
+                resultData.Add("Значение не найдено в справочнике \"Общественные объединения\"; ");
             }
 
             return result;
