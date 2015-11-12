@@ -316,25 +316,11 @@ namespace GBConverter {
             cmd.Connection = conn;
             OracleDataReader dr = null;
             cmd.CommandType = CommandType.Text;
-/*
-            String query = "insert into AKRIKO.APPEAL " +
-                "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
-                " VALUES (@id, @numb,  @f_date,  @hod_ispoln,  @is_control,  @is_repeat,  @podtv,  @subjcode,  @is_sud,  @is_collective,  @replicate_need,  @created,  @unread,  @meri_cik,  @links,  @sud_tematika,  @content_cik,  @ispolnitel_cik_id,  @del,  @only_sud)";
-*/
-            
             String query = "insert into AKRIKO.APPEAL " +
                 "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
                 " VALUES ( CONCAT(:idprefix, LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')), :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
             
-            /*
-            String query = "INSERT INTO akriko.appeal " +
-                "(id, is_control, is_repeat, IS_SUD, IS_COLLECTIVE, UNREAD) " +
-                " VALUES (CONCAT('1' || :newid, LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')), :tmp, :tmp, :tmp, :tmp, :tmp )";
-            */
             OracleCommand command = new OracleCommand(query, conn);
-            //command.Parameters.Add(":newid", "77");
-            //command.Parameters.Add(":tmp", "0");
-
             command.Parameters.Add(":idprefix", "1" + newAppeal.subjcode);
             command.Parameters.Add(":numb", newAppeal.numb);
             command.Parameters.Add(":f_date", newAppeal.f_date);
@@ -343,8 +329,7 @@ namespace GBConverter {
             command.Parameters.Add(":is_control", "0");
             command.Parameters.Add(":is_repeat", "0");
             command.Parameters.Add(":podtv", newAppeal.confirmation);
-            //command.Parameters.Add(":subjcode", Int32.Parse(newAppeal.subjcode));
-            command.Parameters.Add(":subjcode", "77");
+            command.Parameters.Add(":subjcode", Int32.Parse(newAppeal.subjcode));
             command.Parameters.Add(":is_sud", "0");
             command.Parameters.Add(":is_collective", "0");
             command.Parameters.Add(":replicate_need", "0");
