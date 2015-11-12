@@ -471,7 +471,7 @@ namespace GBConverter {
             string[] Words = inputData.Split(Separators, StringSplitOptions.RemoveEmptyEntries);
 
             // Проверяем формат.
-            string pattern = @"^\w+ от \d{1,2}\.\d{1,2}\.\d{4}$";
+            string pattern = @"^[а-яА-Я0-9\./-]+ от \d{1,2}\.\d{1,2}\.\d{4}$";
             string num, f_date;
             string trimmed;
             foreach (string str in Words) {
