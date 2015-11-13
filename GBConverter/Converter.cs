@@ -324,11 +324,13 @@ namespace GBConverter {
                     }
                 }
                 if (NewDeclarant) {
-                    // Заводим нового заявителя.
-                    DeclarantID = d.SaveToDB(this.ConvertDate);
-                    Declarants.Add(d);
+                    // Добавляем в справочник заявителя с фиктивным ID.
+                    DeclarantID = "fake-" + this.DeclarantFakeID++;
+                    if (d.SetID(DeclarantID)) {
+                        Declarants.Add(d);
+                    }
                 }
-                // Доавляем заявителя к обращению.
+                // Проверяем, что такого заявителя ещё нет в данной заявке.
                 NewDeclarant = true;
                 foreach (string[] str in NewAppeal.multi) {
                     if (str[0] == "declarant" && str[1] == DeclarantID) {
@@ -336,8 +338,8 @@ namespace GBConverter {
                         break;
                     }
                 }
-
                 if (NewDeclarant) {
+                    // Добавляем заявителя к обращению.
                     NewAppeal.multi.Add(new string[] { "declarant", DeclarantID });
                 }
             }
@@ -425,8 +427,36 @@ namespace GBConverter {
             bool result = true;
             int AppealIndex = 1;
             // Запоминаем текущую дату и время, чтобы установить их всем создаваемым обращениям.
-            this.ConvertDate = new DateTime();
+            this.ConvertDate = DateTime.Now;
+
+            // Находим заявителей с фиктивным ID и создаём их.
+            Dictionary<string, string> FakeToReal = new Dictionary<string, string>();
+            foreach (Declarant d in Declarants) {
+                if (d.GetID().Contains("fake-")) {
+                    string FakeID = d.GetID();
+                    string RealID = d.SaveToDB(this.ConvertDate);
+                    this.Log("cat_declarants", RealID);
+                    if (RealID == "") {
+                        // Ошибка
+                        Rollback();
+                    } else {
+                        FakeToReal.Add(FakeID, RealID);
+                    }
+                }
+            }
+            
+            // Записываем обращения в БД
             foreach (Appeal NewAppeal in this.SimpleAppeals) {
+                // Заменяем фиктивные id заявителей на реальные.
+                for(int i = 0; i < NewAppeal.multi.Count; i++) {
+                    string[] str = (string[]) NewAppeal.multi[i];
+                    if (str[0] == "declarant") {
+                        KeyValuePair<string, string> ids = FakeToReal.FirstOrDefault(x => x.Key == str[1]);
+                        if (ids.Value != null && ids.Value != "") {
+                            NewAppeal.multi[i] = new string[] { "declarant", ids.Value };
+                        }
+                    }
+                }
                 if (!CreateAppeal(NewAppeal)) {
                     result = false;
                 }
@@ -1103,6 +1133,9 @@ namespace GBConverter {
                 this.LogFileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Conversion-" + this.ConvertDate.ToString("yyyy-MM-dd-HH-mm-ss") + ".log");
             }
             File.AppendAllText(this.LogFileName, table + ";" + id + "\r\n");
+        }
+        void Rollback() {
+
         }
     }
 

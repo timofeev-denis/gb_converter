@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace GBConverter {
     class Declarant {
-        private string id;
+        private string id = "";
         private string f_name;
         private string m_name;
         private string l_name;
@@ -76,12 +76,20 @@ namespace GBConverter {
         public string GetID() {
             return this.id;
         }
+        public bool SetID(string newID) {
+            if (this.id == "" || this.id.ToString().Contains("fake")) {
+                this.id = newID;
+                return true;
+            } else {
+                return false;
+            }
+        }
         /// <summary>
         /// <para>Сохранение заявителя в БД</para>
         /// <para>Возвращает id нового заявителя</para>
         /// </summary>
         /// <returns></returns>
-        public string SaveToDB(DateTime ConvertDate = new DateTime()) {
+        public string SaveToDB(DateTime ConvertDate) {
             OracleConnection conn = DB.GetConnection();
             OracleCommand cmd = new OracleCommand();
             cmd.Connection = conn;
