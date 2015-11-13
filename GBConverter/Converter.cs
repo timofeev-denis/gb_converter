@@ -328,7 +328,17 @@ namespace GBConverter {
                     Declarants.Add(d);
                 }
                 // Доавляем заявителя к обращению.
-                NewAppeal.multi.Add(new string[] { "declarant", DeclarantID });
+                NewDeclarant = true;
+                foreach (string[] str in NewAppeal.multi) {
+                    if (str[0] == "declarant" && str[1] == DeclarantID) {
+                        NewDeclarant = false;
+                        break;
+                    }
+                }
+
+                if (NewDeclarant) {
+                    NewAppeal.multi.Add(new string[] { "declarant", DeclarantID });
+                }
             }
 
             // Создаём "простые" обращения
@@ -462,7 +472,6 @@ namespace GBConverter {
                 if (SubjCode != "") {
                     // Субъект найден
                     resultData.Add(SubjCode);
-                    break;
                 } else {
                     resultData.Clear();
                     resultData.Add("Наименование субъекта РФ не найдено в справочнике \"Субъекты РФ\"; ");
@@ -586,6 +595,7 @@ namespace GBConverter {
             // Удаляем лишние символы.
             inputData = inputData.Replace("№", "");
             inputData = PrepareRawData(inputData);
+            inputData = inputData.ToLower();
 
             // Разделяем текст на части. В Words будут записаны номера+даты.
             char[] Separators = { ';' };
