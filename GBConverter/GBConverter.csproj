@@ -58,6 +58,7 @@
     <Compile Include="Appeal.cs" />
     <Compile Include="Converter.cs" />
     <Compile Include="DB.cs" />
+    <Compile Include="Declarant.cs" />
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

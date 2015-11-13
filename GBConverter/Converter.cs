@@ -25,7 +25,7 @@ namespace GBConverter {
         Dictionary<string, string> Parties = new Dictionary<string, string>();
         Dictionary<string, string> DecTypes = new Dictionary<string, string>();
         Dictionary<string, string> Executors = new Dictionary<string, string>();
-        List<string[]> Declarants = new System.Collections.Generic.List<string[]>();
+        List<Declarant> Declarants = new System.Collections.Generic.List<Declarant>();
         long DeclarantFakeID = 1;
         private ArrayList SimpleAppeals = new ArrayList();
         private DateTime ConvertDate;
@@ -132,16 +132,18 @@ namespace GBConverter {
         /// <param name="row">Строка таблицы.</param>
         /// <param name="parsedData">out ArayList с данными либо с ошибками, если разбор завершился неудаче.</param>
         bool CheckAppeal(Row row, ArrayList appeals, out ArrayList errors) {
+            errors = new ArrayList();
             bool result = true;
             string cellText = "";
             string tmp;
-            errors = new ArrayList();
+            string DeclarantType = "";
+            string DeclarantParty = "";
             ArrayList cellParsedValues;
             ArrayList Subjects = new ArrayList();
             ArrayList NumbersAndDates = new ArrayList();
-            ArrayList Declarants = new ArrayList();
-            //appeals = new ArrayList();
-            // Объект для хранения общих данных обращения
+            // ФИО и info заявителей из колонки "Кем заявлено".
+            ArrayList AppealDeclarants = new ArrayList();
+            // Объект для хранения общих данных обращения/обращений
             Appeal NewAppeal = new Appeal();
             NewAppeal.init();
             // Пропускаем первую и последнюю колонку.
@@ -187,10 +189,13 @@ namespace GBConverter {
                     // Заявитель+
                     case 3:
                         if (ParseDeclarant(cellText, out cellParsedValues)) {
-                            // Проверка завершилась успешно - заполняем массив субъектов
-                            foreach (string str in cellParsedValues) {
-                                Declarants.Add(str);
+                            // Проверка завершилась успешно - заполняем массив заявителей
+                            foreach (string[] str in cellParsedValues) {
+                                //Declarants.Add(str);
+                                AppealDeclarants.Add(str);
+                                //NewAppeal.multi.Add(new string[] { "declarant", str });
                             }
+                            
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
@@ -242,25 +247,23 @@ namespace GBConverter {
                     // 7 - Уровень выборов
                     // Партия
                     case 8:
-                        if (ParseParty(cellText, out cellParsedValues)) {
-                            foreach (string str in cellParsedValues) {
-                                NewAppeal.multi.Add(new string[] { "tematika", str });
-                            }
+                        if (ParseParty(cellText, out tmp)) {
+                            DeclarantParty = tmp;
+                            //NewAppeal.multi.Add(new string[] { "tematika", tmp });
                         } else {
                             // Проверка завершилась с ошибкой.
                             result = false;
                             errors.Add(new ErrorMessage("Партия: ", MessageType.Header, colIndex));
                             // Добавляем все сообщения об ошибках в errors.
-                            foreach (string str in cellParsedValues) {
-                                errors.Add(new ErrorMessage(str, MessageType.Text));
-                            }
+                            errors.Add(new ErrorMessage(tmp, MessageType.Text));
                         }
 
                         break;
                     // Тип заявителя
                     case 9:
                         if (ParseDeclarantType(cellText, out tmp)) {
-                            NewAppeal.declarant_type = tmp;
+                            //NewAppeal.declarant_type = tmp;
+                            DeclarantType = tmp;
                         } else {
                             result = false;
                             errors.Add(new ErrorMessage("Тип заявителя: ", MessageType.Header, colIndex));
@@ -299,6 +302,35 @@ namespace GBConverter {
                 }
             }
 
+            // Проверяем заявителей
+            // AppealDeclarants - ArrayList<string[fio, info]>
+            // DeclarantParty - id партии всех заявителей
+            // DeclarantType - id типа заявителя всех заявителей
+            // Пройтись по AppealDeclarants, сформировать каждого заявителя, поискать его в справочнике (если надо - создать)
+            // В NewAppeal.multi добавить информацию о заявителях с реальными id
+            bool NewDeclarant;
+            string DeclarantID = "";
+            foreach (string[] fio_info in AppealDeclarants) {
+                NewDeclarant = true;
+                Declarant d = new Declarant(DeclarantType, DeclarantParty, fio_info[1]);
+                d.SetFIO(fio_info[0]);
+                // Ищем в справочнике.
+                foreach (Declarant dd in Declarants) {
+                    if (d.Equals(dd)) {
+                        NewDeclarant = false;
+                        DeclarantID = dd.GetID();
+                        break;
+                    }
+                }
+                if (NewDeclarant) {
+                    // Заводим нового заявителя.
+                    DeclarantID = d.SaveToDB();
+                    Declarants.Add(d);
+                }
+                // Доавляем заявителя к обращению.
+                NewAppeal.multi.Add(new string[] { "declarant", DeclarantID });
+            }
+
             // Создаём "простые" обращения
             foreach (string SubjCode in Subjects) {
                 foreach (Tuple<string, string> NumDate in NumbersAndDates) {
@@ -315,13 +347,34 @@ namespace GBConverter {
             OracleCommand cmd = new OracleCommand();
             cmd.Connection = conn;
             OracleDataReader dr = null;
+            string NewAppealID = "";
+            //
+            
+            cmd.CommandText = "select CONCAT('1" + newAppeal.subjcode + "', LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')) from dual";
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                cmd.Dispose();
+                DB.CloseConnection();
+                return false;
+            }
+            dr.Read();
+            if (dr.IsDBNull(0)) {
+                DB.CloseConnection();
+                return false;
+            } else {
+                NewAppealID = dr.GetString(0);
+            }
+            
+            //
             cmd.CommandType = CommandType.Text;
             String query = "insert into AKRIKO.APPEAL " +
                 "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
-                " VALUES ( CONCAT(:idprefix, LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')), :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
+                " VALUES (:newappealid, :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
             
             OracleCommand command = new OracleCommand(query, conn);
-            command.Parameters.Add(":idprefix", "1" + newAppeal.subjcode);
+            command.Parameters.Add(":newappealid", NewAppealID);
             command.Parameters.Add(":numb", newAppeal.numb);
             command.Parameters.Add(":f_date", newAppeal.f_date);
             //command.Parameters.Add(":f_date", this.ConvertDate);
@@ -344,65 +397,12 @@ namespace GBConverter {
             command.Parameters.Add(":only_sud", "0");
             
             command.ExecuteNonQuery();
-            command.Dispose();
 
-            /*
-            insert into AKRIKO.APPEAL (
-                id, 
-                numb, 
-                f_date, 
-                hod_ispoln,
-                IS_CONTROL,
-                IS_REPEAT,
-                PODTV,
-                SUBJCODE,
-                IS_SUD,
-                IS_COLLECTIVE,
-                REPLICATE_NEED,
-                CREATED,
-                UNREAD,
-                MERI_CIK,
-                LINKS,
-                SUD_TEMATIKA,
-                CONTENT_CIK,
-                ISPOLNITEL_CIK_ID,
-                DEL,
-                ONLY_SUD
-                 ) 
-            VALUES (
-                CONCAT('106', LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0') ),
-                '1988',         -- (!) numb
-                '11.10.2015',   -- (!) f_date
-                '0',            -- hod_ispoln
-                '0',            -- IS_CONTROL
-                '0',            -- IS_REPEAT
-                '1',            -- (!) PODTV
-                '6',            -- (!) SUBJCODE,
-                '0',            -- IS_SUD,
-                '0',            -- IS_COLLECTIVE,
-                '0',            -- REPLICATE_NEED,
-                SYSDATE,        -- CREATED,
-                '1',            -- UNREAD,
-                'Принятые меры',-- (!) MERI_CIK,
-                '0',            -- LINKS,
-                '0',            -- SUD_TEMATIKA,
-                'Содержание',   -- (!) CONTENT_CIK,
-                '1000000061',   -- (!) ISPOLNITEL_CIK_ID
-                '0',            -- DEL,
-                '0'             -- ONLY_SUD
-            );
-             */
-
-            /*
-            try {
-                dr = cmd.ExecuteReader();
-            } catch (Oracle.DataAccess.Client.OracleException e) {
-                _t(e.Message.ToString());
-                cmd.Dispose();
-                DB.CloseConnection();
-                return false;
+            foreach (string[] str in newAppeal.multi) {
+                command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'" + str[0] + "','" + str[1] + "',0)";
+                command.ExecuteNonQuery();
             }
-            */ 
+            command.Dispose();
 
             return true;
         }
@@ -487,7 +487,6 @@ namespace GBConverter {
         }
         bool ParseDeclarant(string inputData, out ArrayList resultData) {
             resultData = new ArrayList();
-            ArrayList AppealDeclarants = new ArrayList();
             
             // Проверяем, что поле заполнено
             if (inputData == "") {
@@ -516,19 +515,19 @@ namespace GBConverter {
                     name = str;
                 }
                 if (name.ToLower() == "коллективное обращение" || Regex.IsMatch(name, FullPattern) || Regex.IsMatch(name, ShortPattern)) {
-                    AppealDeclarants.Add(new string[] {name, info});
+                    resultData.Add(new string[] { name, info });
                 } else {
                     // Неверный формат
                     resultData.Add( "Данные не соответствуют формату; " );
                     return false;
                 }
             }
-
+            /*
             // Ищем в справочнике id каждого заявителя по его имени.
             bool NewDeclarant;
             foreach (string[] declarant in AppealDeclarants) {
                 NewDeclarant = true;
-                foreach (string[] str in Declarants) {
+                foreach (Declarant d in Declarants) {
                     if (str[1] == declarant[0]) {
                         // Заявитель найден в справочнике.
                         // str[0] - id заявителя.
@@ -540,9 +539,12 @@ namespace GBConverter {
                 if (NewDeclarant) {
                     // Заявитель не был найден в справочнике - добавляем с фиктивным ID.
                     Declarants.Add(new string[] { "fake-" + DeclarantFakeID.ToString(), declarant[0] });
+                    // Добавляем в результирующий список заявителей
+                    resultData.Add("fake-" + DeclarantFakeID.ToString());
                     DeclarantFakeID++;
                 }
             }
+            */
             return true;
         }
         bool ParseConfirmation(string data, out string parsed) {
@@ -606,24 +608,19 @@ namespace GBConverter {
             }
             return true;
         }
-        bool ParseParty(string inputData, out ArrayList resultData) {
+        bool ParseParty(string inputData, out string resultData) {
             bool result = true;
-            resultData = new ArrayList();
+            resultData = "";
             // Удаляем лишние символы.
             inputData = PrepareRawData(inputData);
-            // Разделяем текст на части. В Words будут записаны названия субъектов.
-            char[] Separatos = { ';' };
-            string[] Words = inputData.Split(Separatos, StringSplitOptions.RemoveEmptyEntries);
 
-            // Ищем код каждого субъекта по его названию.
+            // Ищем код партии по её названию.
             try {
-                foreach (string str in Words) {
-                    KeyValuePair<string, string> Party = Parties.First(s => s.Key == str.Trim());
-                    resultData.Add(Party.Value);
-                }
+                KeyValuePair<string, string> Party = Parties.First(s => s.Key == inputData.Trim());
+                resultData = Party.Value;
             } catch (System.InvalidOperationException) {
-                result = false;
-                resultData.Add("Значение не найдено в справочнике \"Общественные объединения\"; ");
+                resultData = "Значение не найдено в справочнике \"Общественные объединения\"; ";
+                return false;
             }
 
             return result;
@@ -872,7 +869,6 @@ namespace GBConverter {
             }
 
             // Исполнители.
-            
             cmd.CommandText = "select lower(l_name), TO_CHAR(id) from akriko.cat_executors where TO_CHAR(id) like '100%' order by l_name";
             try {
                 dr = cmd.ExecuteReader();
@@ -894,6 +890,53 @@ namespace GBConverter {
                 }
             }
              
+            // Заявители
+            cmd.CommandText = "select SUBSTR(TRIM(f_name), 0, 1), NVL(SUBSTR(TRIM(m_name), 0, 1), ''), TRIM(l_name), type, NVL(TO_CHAR(party), ''), NVL(TRIM(info), ''), TO_CHAR(id) from akriko.cat_declarants where id = 1000000101";
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                cmd.Dispose();
+                DB.CloseConnection();
+                return false;
+            }
+            while (dr.Read()) {
+                try {
+                    string fname = "";
+                    string mname = "";
+                    string lname = "";
+                    string type = "";
+                    string party = "";
+                    string info = "";
+                    string id = "";
+                    if (!dr.IsDBNull(0)) {
+                        fname = dr.GetString(0);
+                    }
+                    if (!dr.IsDBNull(1)) {
+                        mname = dr.GetString(1);
+                    }
+                    if (!dr.IsDBNull(2)) {
+                        lname = dr.GetString(2);
+                    }
+                    if (!dr.IsDBNull(3)) {
+                        type = dr.GetValue(3).ToString();
+                    }
+                    if (!dr.IsDBNull(4)) {
+                        party = dr.GetString(4);
+                    }
+                    if (!dr.IsDBNull(5)) {
+                        info = dr.GetString(5);
+                    }
+                    if (!dr.IsDBNull(6)) {
+                        id = dr.GetString(6);
+                    }
+
+                    Declarants.Add(new Declarant(fname, mname, lname, type, party, info, id));
+                    //dr.GetString(0).Trim(), dr.GetString(1).Trim()
+                } catch (Exception e) {
+                    MessageBox.Show("При чтении из справочника заявителей возникла ошибка", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                }
+            }
 
             /*
             Executors.Add("Алёшкин", "1");
