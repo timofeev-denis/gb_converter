@@ -623,6 +623,9 @@ namespace GBConverter {
             resultData = "";
             // Удаляем лишние символы.
             inputData = PrepareRawData(inputData);
+            if (inputData == "") {
+                return true;
+            }
 
             // Ищем код партии по её названию.
             try {
