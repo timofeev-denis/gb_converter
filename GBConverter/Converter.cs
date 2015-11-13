@@ -29,6 +29,7 @@ namespace GBConverter {
         long DeclarantFakeID = 1;
         private ArrayList SimpleAppeals = new ArrayList();
         private DateTime ConvertDate;
+        private string LogFileName = "";
 
         static void _t(String str) {
             System.Diagnostics.Trace.WriteLine(str);
@@ -324,7 +325,7 @@ namespace GBConverter {
                 }
                 if (NewDeclarant) {
                     // Заводим нового заявителя.
-                    DeclarantID = d.SaveToDB();
+                    DeclarantID = d.SaveToDB(this.ConvertDate);
                     Declarants.Add(d);
                 }
                 // Доавляем заявителя к обращению.
@@ -407,6 +408,7 @@ namespace GBConverter {
             command.Parameters.Add(":only_sud", "0");
             
             command.ExecuteNonQuery();
+            this.Log("appeal", NewAppealID);
 
             foreach (string[] str in newAppeal.multi) {
                 command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'" + str[0] + "','" + str[1] + "',0)";
@@ -904,7 +906,7 @@ namespace GBConverter {
             }
              
             // Заявители
-            cmd.CommandText = "select SUBSTR(TRIM(f_name), 0, 1), NVL(SUBSTR(TRIM(m_name), 0, 1), ''), TRIM(l_name), type, NVL(TO_CHAR(party), ''), NVL(TRIM(info), ''), TO_CHAR(id) from akriko.cat_declarants where id = 1000000101";
+            cmd.CommandText = "select SUBSTR(TRIM(f_name), 0, 1), NVL(SUBSTR(TRIM(m_name), 0, 1), ''), TRIM(l_name), type, NVL(TO_CHAR(party), ''), NVL(TRIM(info), ''), TO_CHAR(id) from akriko.cat_declarants";
             try {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
@@ -1095,6 +1097,12 @@ namespace GBConverter {
             Subjects.Add("Ямало-Ненецкий автономный округ", "89");
             */
             return true;
+        }
+        void Log(string table, string id) {
+            if (this.LogFileName == "") {
+                this.LogFileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Conversion-" + this.ConvertDate.ToString("yyyy-MM-dd-HH-mm-ss") + ".log");
+            }
+            File.AppendAllText(this.LogFileName, table + ";" + id + "\r\n");
         }
     }
 
