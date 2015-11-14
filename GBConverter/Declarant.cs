@@ -73,6 +73,9 @@ namespace GBConverter {
                 this.l_name = fio.Substring(3);
             }
         }
+        public string GetFIO() {
+            return this.f_name + "." + ((this.m_name == "") ? "" : this.m_name + ".") + " " + this.l_name;
+        }
         public string GetID() {
             return this.id;
         }
@@ -102,11 +105,12 @@ namespace GBConverter {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
                 cmd.Dispose();
-                return "";
+                throw;
             }
             dr.Read();
             if (dr.IsDBNull(0)) {
-                return "";
+                cmd.Dispose();
+                throw new Exception("Не удалось сформировать id заявителя.");
             } else {
                 NewDeclarantID = dr.GetString(0);
                 this.id = NewDeclarantID;
@@ -126,6 +130,7 @@ namespace GBConverter {
             cmd.Parameters.Add(":info", this.info);
             cmd.Parameters.Add(":created", ConvertDate);
             cmd.ExecuteNonQuery();
+            cmd.Dispose();
             return NewDeclarantID;
         }
     }

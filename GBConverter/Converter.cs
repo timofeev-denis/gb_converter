@@ -369,12 +369,12 @@ namespace GBConverter {
             } catch (Oracle.DataAccess.Client.OracleException e) {
                 _t(e.Message.ToString());
                 cmd.Dispose();
-                DB.CloseConnection();
+                //DB.CloseConnection();
                 return false;
             }
             dr.Read();
             if (dr.IsDBNull(0)) {
-                DB.CloseConnection();
+                //DB.CloseConnection();
                 return false;
             } else {
                 NewAppealID = dr.GetString(0);
@@ -390,7 +390,6 @@ namespace GBConverter {
             command.Parameters.Add(":newappealid", NewAppealID);
             command.Parameters.Add(":numb", newAppeal.numb);
             command.Parameters.Add(":f_date", newAppeal.f_date);
-            //command.Parameters.Add(":f_date", this.ConvertDate);
             command.Parameters.Add(":hod_ispoln", "0");
             command.Parameters.Add(":is_control", "0");
             command.Parameters.Add(":is_repeat", "0");
@@ -416,6 +415,8 @@ namespace GBConverter {
                 command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'" + str[0] + "','" + str[1] + "',0)";
                 command.ExecuteNonQuery();
             }
+            command.CommandText = "insert into akriko.log_appeal (time, action, appeal_id, user_subjcode, user_l_name) values(TO_TIMESTAMP('" + this.ConvertDate.ToString("dd.MM.yyyy HH-mm-ss") + "', 'DD.MM.YYYY HH24-MI-SS'), '1', " + NewAppealID + ", '0', 'Converter')";
+            command.ExecuteNonQuery();
             command.Dispose();
 
             return true;
@@ -424,7 +425,6 @@ namespace GBConverter {
             if (progressBar != null) {
                 progressBar.Value = 0;
             }
-            bool result = true;
             int AppealIndex = 1;
             // Запоминаем текущую дату и время, чтобы установить их всем создаваемым обращениям.
             this.ConvertDate = DateTime.Now;
@@ -434,14 +434,16 @@ namespace GBConverter {
             foreach (Declarant d in Declarants) {
                 if (d.GetID().Contains("fake-")) {
                     string FakeID = d.GetID();
-                    string RealID = d.SaveToDB(this.ConvertDate);
-                    this.Log("cat_declarants", RealID);
-                    if (RealID == "") {
-                        // Ошибка
-                        Rollback();
-                    } else {
+                    string RealID = "";
+                    try {
+                        RealID = d.SaveToDB(this.ConvertDate);
                         FakeToReal.Add(FakeID, RealID);
+                    } catch (Exception e) {
+                        e.Data.Add("UserMessage", "Заявитель: " + d.GetFIO());
+                        DB.Rollback();
+                        throw;
                     }
+                    this.Log("cat_declarants", RealID);
                 }
             }
             
@@ -457,8 +459,12 @@ namespace GBConverter {
                         }
                     }
                 }
-                if (!CreateAppeal(NewAppeal)) {
-                    result = false;
+                try {
+                    CreateAppeal(NewAppeal);
+                } catch (Exception e) {
+                    e.Data.Add("UserMessage", "Заявка: " + NewAppeal.numb);
+                    DB.Rollback();
+                    throw;
                 }
                 if (progressBar != null) {
                     double percent = (double)AppealIndex / this.SimpleAppeals.Count * 100;
@@ -466,7 +472,8 @@ namespace GBConverter {
                 }
                 AppealIndex++;
             }
-            return result;
+            DB.Commit();
+            return true;
         }
         bool ParseSubject(string inputData, out ArrayList resultData) {
             bool result = false;
@@ -1133,9 +1140,6 @@ namespace GBConverter {
                 this.LogFileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Conversion-" + this.ConvertDate.ToString("yyyy-MM-dd-HH-mm-ss") + ".log");
             }
             File.AppendAllText(this.LogFileName, table + ";" + id + "\r\n");
-        }
-        void Rollback() {
-
         }
     }
 

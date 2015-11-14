@@ -37,10 +37,18 @@ namespace GBConverter {
         }
 
         private void ConvertButton_Click(object sender, EventArgs e) {
-            if (this.converter.Convert(progressBar)) {
-                MessageBox.Show("Конвертация завершена.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            } else {
-                MessageBox.Show("Во время конвертации возникла ошибка.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            try {
+                if (this.converter.Convert(progressBar)) {
+                    MessageBox.Show("Конвертация завершена.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                } else {
+                    MessageBox.Show("Во время конвертации возникла ошибка.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                }
+            } catch (Exception ex) {
+                string ExtraInfo = "";
+                if( ex.Data.Contains("UserMessage") ) {
+                    ExtraInfo = "\n" + ex.Data["UserMessage"].ToString();
+                }
+                MessageBox.Show("Во время конвертации возникла ошибка." + ExtraInfo + "\n\n" + ex.Message, "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
         }
     }

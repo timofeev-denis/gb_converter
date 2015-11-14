@@ -8,6 +8,7 @@ namespace GBConverter {
     class DB {
         private static OracleConnection conn = null;
         private static string oradb = "";
+        private static OracleTransaction transaction = null;
 
         private DB() {}
         public static OracleConnection GetConnection() {
@@ -29,15 +30,30 @@ namespace GBConverter {
             try {
                 conn = new OracleConnection(oradb);
                 conn.Open();
+                transaction = conn.BeginTransaction();
                 return conn;
-            } catch (Exception e) {
+            } catch (Exception) {
                 return null;
             }
         }
-
+        public static void Commit() {
+            if (conn != null) {
+                transaction.Commit();
+            }
+        }
         public static void CloseConnection() {
+            Rollback();
             if (conn != null) {
                 conn.Dispose();
+            }
+        }
+        public static void Rollback() {
+            if(transaction != null) {
+                try {
+                    transaction.Rollback();
+                } catch (Exception) {
+                    // Подавляем исключения.
+                }
             }
         }
     }
