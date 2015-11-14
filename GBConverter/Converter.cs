@@ -304,11 +304,6 @@ namespace GBConverter {
             }
 
             // Проверяем заявителей
-            // AppealDeclarants - ArrayList<string[fio, info]>
-            // DeclarantParty - id партии всех заявителей
-            // DeclarantType - id типа заявителя всех заявителей
-            // Пройтись по AppealDeclarants, сформировать каждого заявителя, поискать его в справочнике (если надо - создать)
-            // В NewAppeal.multi добавить информацию о заявителях с реальными id
             bool NewDeclarant;
             string DeclarantID = "";
             foreach (string[] fio_info in AppealDeclarants) {
@@ -415,6 +410,10 @@ namespace GBConverter {
                 command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'" + str[0] + "','" + str[1] + "',0)";
                 command.ExecuteNonQuery();
             }
+            // Добавляем "Субъект РФ: (указ. в обращ.)".
+            command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'ik_subjcode','" + newAppeal.subjcode + "',0)";
+            command.ExecuteNonQuery();
+
             command.CommandText = "insert into akriko.log_appeal (time, action, appeal_id, user_subjcode, user_l_name) values(TO_TIMESTAMP('" + this.ConvertDate.ToString("dd.MM.yyyy HH-mm-ss") + "', 'DD.MM.YYYY HH24-MI-SS'), '1', " + NewAppealID + ", '0', 'Converter')";
             command.ExecuteNonQuery();
             command.Dispose();
