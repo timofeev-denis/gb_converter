@@ -115,7 +115,7 @@ namespace GBConverter {
                 NewDeclarantID = dr.GetString(0);
                 this.id = NewDeclarantID;
             }
-            
+            dr.Dispose();
             //cmd.CommandType = CommandType.Text;
             cmd.CommandText = "INSERT INTO akriko.cat_declarants (id,l_name,f_name,m_name,type,party,info,created) " +
                 "VALUES(:newdeclarantid, :lname, :fname, :mname, :type, :party, :info, :created)";

@@ -51,5 +51,23 @@ namespace GBConverter {
                 MessageBox.Show("Во время конвертации возникла ошибка." + ExtraInfo + "\n\n" + ex.Message, "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
         }
+
+        private void RollbackButton_Click(object sender, EventArgs e) {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Журналы конвертации|*.log";
+            if (openFileDialog.ShowDialog() == DialogResult.OK) {
+                this.converter = new Converter();
+                try {
+                    long DeletedAppeals = this.converter.Rollback(openFileDialog.FileNames[0], progressBar);
+                    if (DeletedAppeals >= 0) {
+                        MessageBox.Show("Откат завершён.\nУдалено заявок: " + DeletedAppeals.ToString() + ".", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    } else {
+                        MessageBox.Show("Во время отката возникла ошибка.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    }
+                } catch (Exception ex) {
+                    MessageBox.Show("Во время отката возникла ошибка." + ex.Message, "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                }
+            }
+        }
     }
 }

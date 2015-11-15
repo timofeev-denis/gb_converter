@@ -28,13 +28,14 @@
             this.ExitButton = new System.Windows.Forms.Button();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.ConvertButton = new System.Windows.Forms.Button();
+            this.RollbackButton = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // OpenFileButton
             // 
             this.OpenFileButton.Location = new System.Drawing.Point(12, 110);
             this.OpenFileButton.Name = "OpenFileButton";
-            this.OpenFileButton.Size = new System.Drawing.Size(108, 23);
+            this.OpenFileButton.Size = new System.Drawing.Size(98, 23);
             this.OpenFileButton.TabIndex = 0;
             this.OpenFileButton.Text = "Выбрать файл";
             this.OpenFileButton.UseVisualStyleBackColor = true;
@@ -42,7 +43,7 @@
             // 
             // ExitButton
             // 
-            this.ExitButton.Location = new System.Drawing.Point(259, 110);
+            this.ExitButton.Location = new System.Drawing.Point(298, 110);
             this.ExitButton.Name = "ExitButton";
             this.ExitButton.Size = new System.Drawing.Size(72, 23);
             this.ExitButton.TabIndex = 2;
@@ -54,25 +55,36 @@
             // 
             this.progressBar.Location = new System.Drawing.Point(12, 52);
             this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(319, 23);
+            this.progressBar.Size = new System.Drawing.Size(358, 23);
             this.progressBar.TabIndex = 3;
             // 
             // ConvertButton
             // 
             this.ConvertButton.Enabled = false;
-            this.ConvertButton.Location = new System.Drawing.Point(126, 110);
+            this.ConvertButton.Location = new System.Drawing.Point(116, 110);
             this.ConvertButton.Name = "ConvertButton";
-            this.ConvertButton.Size = new System.Drawing.Size(108, 23);
+            this.ConvertButton.Size = new System.Drawing.Size(98, 23);
             this.ConvertButton.TabIndex = 4;
             this.ConvertButton.Text = "Конвертировать";
             this.ConvertButton.UseVisualStyleBackColor = true;
             this.ConvertButton.Click += new System.EventHandler(this.ConvertButton_Click);
             // 
+            // RollbackButton
+            // 
+            this.RollbackButton.Location = new System.Drawing.Point(220, 110);
+            this.RollbackButton.Name = "RollbackButton";
+            this.RollbackButton.Size = new System.Drawing.Size(72, 23);
+            this.RollbackButton.TabIndex = 5;
+            this.RollbackButton.Text = "Откатить";
+            this.RollbackButton.UseVisualStyleBackColor = true;
+            this.RollbackButton.Click += new System.EventHandler(this.RollbackButton_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(343, 145);
+            this.ClientSize = new System.Drawing.Size(381, 145);
+            this.Controls.Add(this.RollbackButton);
             this.Controls.Add(this.ConvertButton);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.ExitButton);
@@ -91,6 +103,7 @@
         private System.Windows.Forms.Button ExitButton;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Button ConvertButton;
+        private System.Windows.Forms.Button RollbackButton;
     }
 }
 

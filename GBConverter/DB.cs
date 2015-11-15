@@ -39,6 +39,7 @@ namespace GBConverter {
         public static void Commit() {
             if (conn != null) {
                 transaction.Commit();
+                transaction = conn.BeginTransaction();
             }
         }
         public static void CloseConnection() {
@@ -51,6 +52,7 @@ namespace GBConverter {
             if(transaction != null) {
                 try {
                     transaction.Rollback();
+                    transaction = conn.BeginTransaction();
                 } catch (Exception) {
                     // Подавляем исключения.
                 }

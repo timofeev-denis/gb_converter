@@ -203,8 +203,8 @@ namespace GBConverter {
                             errors.Add(new ErrorMessage("Кем заявлено: ", MessageType.Header, colIndex));
 
                             // Добавляем все сообщения об ошибках в errors.
-                            foreach (string str in cellParsedValues) {
-                                errors.Add(new ErrorMessage(str,MessageType.Text));
+                            foreach (string[] str in cellParsedValues) {
+                                errors.Add(new ErrorMessage(str[0],MessageType.Text));
                             }
                         }
                         break;
@@ -399,7 +399,8 @@ namespace GBConverter {
                 this.ParentIDs.Add(new string[] { newAppeal.id, NewAppealID });
             }
             //
-            cmd.CommandType = CommandType.Text;
+            dr.Dispose();
+            cmd.Dispose();
             String query = "insert into AKRIKO.APPEAL " +
                 "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, parent_id, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
                 " VALUES (:newappealid, :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :parent_id, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
@@ -567,7 +568,7 @@ namespace GBConverter {
             
             // Проверяем, что поле заполнено
             if (inputData == "") {
-                resultData.Add("Не заполнено обязательное поле; ");
+                resultData.Add(new string[] {"Не заполнено обязательное поле; "});
                 return false;
             }
             
@@ -595,7 +596,8 @@ namespace GBConverter {
                     resultData.Add(new string[] { name, info });
                 } else {
                     // Неверный формат
-                    resultData.Add( "Данные не соответствуют формату; " );
+                    resultData.Clear();
+                    resultData.Add(new string[] { "Данные не соответствуют формату; " });
                     return false;
                 }
             }
@@ -1183,6 +1185,57 @@ namespace GBConverter {
                 this.LogFileName = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Conversion-" + this.ConvertDate.ToString("yyyy-MM-dd-HH-mm-ss") + ".log");
             }
             File.AppendAllText(this.LogFileName, table + ";" + id + "\r\n");
+        }
+        public long Rollback(string logFileName, ProgressBar progressBar = null) {
+            if (progressBar != null) {
+                progressBar.Value = 0;
+            } 
+            OracleConnection conn = DB.GetConnection();
+            OracleCommand cmd = new OracleCommand();
+            cmd.Connection = conn;
+            cmd.CommandType = CommandType.Text;
+            
+            string line;
+            int LineCount = 0;
+            int LineNumber = 0;
+            int AppealCounter = 0;
+            System.IO.StreamReader file = new System.IO.StreamReader(logFileName);
+            while ((line = file.ReadLine()) != null) {
+                LineCount++;
+            }
+            file.BaseStream.Seek(0, SeekOrigin.Begin);
+            file.DiscardBufferedData();
+            while ((line = file.ReadLine()) != null) {
+                int pos = line.IndexOf(";");
+                LineNumber++;
+                if (pos == -1) {
+                    DB.Rollback();
+                    file.Close();
+                    throw new Exception("Неверный формат журнала (строка" + LineNumber.ToString() + " )");
+                }
+                string id = line.Substring(pos + 1);
+                switch (line.Substring(0, pos)) {
+                    case "cat_declarants":
+                        cmd.CommandText = "DELETE FROM akriko.cat_declarants WHERE id = " + id;
+                        cmd.ExecuteNonQuery();
+                        break;
+                    case "appeal":
+                        cmd.CommandText = "DELETE FROM akriko.appeal_multi WHERE appeal_id=" + id;
+                        cmd.ExecuteNonQuery();
+                        cmd.CommandText = "DELETE FROM akriko.log_appeal WHERE appeal_id=" + id;
+                        cmd.ExecuteNonQuery();
+                        cmd.CommandText = "DELETE FROM akriko.appeal WHERE id=" + id;
+                        AppealCounter += cmd.ExecuteNonQuery();
+                        break;
+                }
+                if (progressBar != null) {
+                    double percent = (double)LineNumber / LineCount * 100;
+                    progressBar.Value = System.Convert.ToInt32(percent);
+                }
+            }
+            DB.Commit();
+            file.Close();
+            return AppealCounter;
         }
     }
 
