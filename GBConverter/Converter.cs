@@ -27,6 +27,8 @@ namespace GBConverter {
         Dictionary<string, string> Executors = new Dictionary<string, string>();
         List<Declarant> Declarants = new System.Collections.Generic.List<Declarant>();
         long DeclarantFakeID = 1;
+        long AppealFakeID = 1;
+        private ArrayList ParentIDs = new ArrayList();
         private ArrayList SimpleAppeals = new ArrayList();
         private DateTime ConvertDate;
         private string LogFileName = "";
@@ -192,9 +194,7 @@ namespace GBConverter {
                         if (ParseDeclarant(cellText, out cellParsedValues)) {
                             // Проверка завершилась успешно - заполняем массив заявителей
                             foreach (string[] str in cellParsedValues) {
-                                //Declarants.Add(str);
                                 AppealDeclarants.Add(str);
-                                //NewAppeal.multi.Add(new string[] { "declarant", str });
                             }
                             
                         } else {
@@ -275,8 +275,10 @@ namespace GBConverter {
                     // Тематика
                     case 10:
                         if (ParseTheme(cellText, out cellParsedValues)) {
+                            int ThemeIndex = 0;
                             foreach(string str in cellParsedValues) {
-                                NewAppeal.multi.Add(new string[] { "tematika", str });
+                                NewAppeal.multi.Add(new string[] { "tematika", str, ThemeIndex.ToString() });
+                                ThemeIndex++;
                             }
                         } else {
                             // Проверка завершилась с ошибкой.
@@ -306,6 +308,7 @@ namespace GBConverter {
             // Проверяем заявителей
             bool NewDeclarant;
             string DeclarantID = "";
+            int DeclarantIndex = 0;
             foreach (string[] fio_info in AppealDeclarants) {
                 NewDeclarant = true;
                 Declarant d = new Declarant(DeclarantType, DeclarantParty, fio_info[1]);
@@ -333,18 +336,35 @@ namespace GBConverter {
                         break;
                     }
                 }
+
                 if (NewDeclarant) {
                     // Добавляем заявителя к обращению.
-                    NewAppeal.multi.Add(new string[] { "declarant", DeclarantID });
+                    NewAppeal.multi.Add(new string[] { "declarant", DeclarantID, DeclarantIndex.ToString() });
+                    DeclarantIndex++;
                 }
+            }
+            // Добавляем субъекты
+            int SubjCodeIndex = 0;
+            foreach (string sc in Subjects) {
+                NewAppeal.multi.Add(new string[] { "ik_subjcode", sc, SubjCodeIndex.ToString() });
+                SubjCodeIndex++;
             }
 
             // Создаём "простые" обращения
-            foreach (string SubjCode in Subjects) {
-                foreach (Tuple<string, string> NumDate in NumbersAndDates) {
-                    NewAppeal.subjcode = SubjCode;
-                    NewAppeal.numb = NumDate.Item1;
-                    NewAppeal.f_date = NumDate.Item2;
+            foreach (Tuple<string, string> NumDate in NumbersAndDates) {
+                string ParentID = null;
+                if(Subjects.Count > 1) {
+                    // Указано несколько субъектов - создаём родительской обращение
+                    ParentID = this.AppealFakeID.ToString();
+                    this.AppealFakeID++;
+                    ParentID = "999" + ParentID.PadLeft(5, '0');
+                    NewAppeal.Prepare(ParentID, null, "0", NumDate.Item1, NumDate.Item2);
+                    appeals.Add(NewAppeal);
+                } else {
+                    ParentID = null;
+                }
+                foreach (string SubjCode in Subjects) {
+                    NewAppeal.Prepare(null, ParentID, SubjCode, NumDate.Item1, NumDate.Item2);
                     appeals.Add(NewAppeal);
                 }
             }
@@ -358,7 +378,7 @@ namespace GBConverter {
             string NewAppealID = "";
             //
             
-            cmd.CommandText = "select CONCAT('1" + newAppeal.subjcode + "', LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')) from dual";
+            cmd.CommandText = "select CONCAT('1" + newAppeal.subjcode.PadLeft(2, '0') + "', LPAD(AKRIKO.seq_appeal.NEXTVAL,7,'0')) from dual";
             try {
                 dr = cmd.ExecuteReader();
             } catch (Oracle.DataAccess.Client.OracleException e) {
@@ -374,12 +394,15 @@ namespace GBConverter {
             } else {
                 NewAppealID = dr.GetString(0);
             }
-            
+            // Сохраняем реальные id родительских обращений
+            if (newAppeal.id != null) {
+                this.ParentIDs.Add(new string[] { newAppeal.id, NewAppealID });
+            }
             //
             cmd.CommandType = CommandType.Text;
             String query = "insert into AKRIKO.APPEAL " +
-                "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
-                " VALUES (:newappealid, :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
+                "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, parent_id, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
+                " VALUES (:newappealid, :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :parent_id, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
             
             OracleCommand command = new OracleCommand(query, conn);
             command.Parameters.Add(":newappealid", NewAppealID);
@@ -390,6 +413,7 @@ namespace GBConverter {
             command.Parameters.Add(":is_repeat", "0");
             command.Parameters.Add(":podtv", newAppeal.confirmation);
             command.Parameters.Add(":subjcode", Int32.Parse(newAppeal.subjcode));
+            command.Parameters.Add(":parent_id", newAppeal.parent_id);
             command.Parameters.Add(":is_sud", "0");
             command.Parameters.Add(":is_collective", "0");
             command.Parameters.Add(":replicate_need", "0");
@@ -407,13 +431,17 @@ namespace GBConverter {
             this.Log("appeal", NewAppealID);
 
             foreach (string[] str in newAppeal.multi) {
-                command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'" + str[0] + "','" + str[1] + "',0)";
+                command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'" + str[0] + "','" + str[1] + "', '" + str[2] + "')";
                 command.ExecuteNonQuery();
             }
-            // Добавляем "Субъект РФ: (указ. в обращ.)".
-            command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,content,key) values(" + NewAppealID + ",'ik_subjcode','" + newAppeal.subjcode + "',0)";
+            // Добавляем ещё строки, которые доавляет АКРИКО.
+            command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,key) values(" + NewAppealID + ",'sud_declarant',0)";
             command.ExecuteNonQuery();
-
+            command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,key) values(" + NewAppealID + ",'sud_member',0)";
+            command.ExecuteNonQuery();
+            command.CommandText = "insert into akriko.appeal_multi (appeal_id,col_name,key) values(" + NewAppealID + ",'election_ik',0)";
+            command.ExecuteNonQuery();
+            // Добавляем запись в журнал корректировок.
             command.CommandText = "insert into akriko.log_appeal (time, action, appeal_id, user_subjcode, user_l_name) values(TO_TIMESTAMP('" + this.ConvertDate.ToString("dd.MM.yyyy HH-mm-ss") + "', 'DD.MM.YYYY HH24-MI-SS'), '1', " + NewAppealID + ", '0', 'Converter')";
             command.ExecuteNonQuery();
             command.Dispose();
@@ -454,7 +482,8 @@ namespace GBConverter {
                     if (str[0] == "declarant") {
                         KeyValuePair<string, string> ids = FakeToReal.FirstOrDefault(x => x.Key == str[1]);
                         if (ids.Value != null && ids.Value != "") {
-                            NewAppeal.multi[i] = new string[] { "declarant", ids.Value };
+                            ((string[])NewAppeal.multi[i])[1] = ids.Value;
+                            //NewAppeal.multi[i] = new string[] { "declarant", ids.Value, str[2] };
                         }
                     }
                 }
@@ -471,6 +500,7 @@ namespace GBConverter {
                 }
                 AppealIndex++;
             }
+            LinkAppeals();
             DB.Commit();
             return true;
         }
@@ -747,6 +777,20 @@ namespace GBConverter {
             }
 
             return result;
+        }
+        bool LinkAppeals() {
+            OracleConnection conn = DB.GetConnection();
+            OracleCommand cmd = new OracleCommand();
+            cmd.Connection = conn;
+
+            //cmd.CommandType = CommandType.Text;
+            foreach (string[] str in this.ParentIDs) {
+                cmd.CommandText = "UPDATE akriko.appeal SET parent_id = " + str[1] + " WHERE parent_id=" + str[0];
+                _t(cmd.CommandText);
+                cmd.ExecuteNonQuery();
+            }
+            cmd.Dispose();
+            return true;
         }
         string PrepareRawData(String data) {
             // Удаляет лишние символы

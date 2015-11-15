@@ -41,5 +41,24 @@ namespace GBConverter {
             isParent = false;
             multi = new ArrayList();
         }
+        //public void Prepare(string id, string parent_id, string subjcode, string numb, string f_date, ArrayList appealMulti, ArrayList ik_subjcodes) {
+        public void Prepare(string id, string parent_id, string subjcode, string numb, string f_date) {
+            this.id = id;
+            this.parent_id = parent_id;
+            this.subjcode = subjcode;
+            this.numb = numb;
+            this.f_date = f_date;
+            /*
+            this.multi = new ArrayList();
+            foreach (string[] str in appealMulti) {
+                this.multi.Add(new string[] { str[0], str[1], str[2] });
+            }
+            int SubjCodeIndex = 0;
+            foreach (string sc in ik_subjcodes) {
+                this.multi.Add(new string[] { "ik_subjcode", sc, SubjCodeIndex.ToString() });
+                SubjCodeIndex++;
+            }
+            */
+        }
     }
 }
