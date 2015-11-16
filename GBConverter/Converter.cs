@@ -423,7 +423,7 @@ namespace GBConverter {
             command.Parameters.Add(":is_collective", "0");
             command.Parameters.Add(":replicate_need", "0");
             command.Parameters.Add(":created", this.ConvertDate);
-            command.Parameters.Add(":unread", "1");
+            command.Parameters.Add(":unread", "0");
             command.Parameters.Add(":meri_cik", newAppeal.measures);
             command.Parameters.Add(":links", "0");
             command.Parameters.Add(":sud_tematika", "0");
