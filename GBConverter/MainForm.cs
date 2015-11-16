@@ -23,6 +23,7 @@ namespace GBConverter {
 
         private void OpenFileButton_Click(object sender, EventArgs e) {
             OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Файлы Зелёной книги|*.docx";
             if (openFileDialog.ShowDialog() == DialogResult.OK) {
                 this.OpenFileButton.Enabled = false;
                 this.RollbackButton.Enabled = false;
@@ -39,6 +40,7 @@ namespace GBConverter {
         }
 
         private void ConvertButton_Click(object sender, EventArgs e) {
+            this.ConvertButton.Enabled = false;
             try {
                 if (this.converter.Convert(progressBar)) {
                     MessageBox.Show("Конвертация завершена.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);

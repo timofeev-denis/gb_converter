@@ -57,6 +57,10 @@ namespace GBConverter {
                 MessageBox.Show(String.Format("Не удалось открыть файл {0}.\nВозможно он используется другой программой.\n\nРабота программы прекращена.", fileName),
                     "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return false;
+            } catch (Exception e) {
+                MessageBox.Show(String.Format("Не удалось открыть файл {0}.\nВозможно он используется другой программой.\n\nРабота программы прекращена.\n{1}", fileName, e.Message),
+                    "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return false;
             }
             Table appealsTable = document.Tables[0];
 
@@ -684,6 +688,11 @@ namespace GBConverter {
                 }
                 num = trimmed.Substring(0, trimmed.IndexOf(" от ")).Trim();
                 f_date = trimmed.Substring(trimmed.IndexOf(" от ") + 4).Trim();
+                if (AppealExists(num, f_date)) {
+                    resultData.Clear();
+                    resultData.Add("Заявка № " + num + " от " + f_date + " уже существует; ");
+                    return false;
+                }
                 resultData.Add(Tuple.Create(num, f_date));
             }
             return true;
@@ -1236,6 +1245,39 @@ namespace GBConverter {
             DB.Commit();
             file.Close();
             return AppealCounter;
+        }
+        bool AppealExists(string numb, string f_date) {
+            OracleConnection conn = DB.GetConnection();
+            OracleCommand cmd = new OracleCommand();
+            cmd.Connection = conn;
+            OracleDataReader dr = null;
+            cmd.CommandType = CommandType.Text;
+            // Проверяем уникальность номера и даты заявки
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = "select count(*) from akriko.appeal where numb='" + numb + "' and TO_CHAR(f_date, 'DD.MM.YYYY')='" + f_date + "'";
+
+            try {
+                dr = cmd.ExecuteReader();
+            } catch (Oracle.DataAccess.Client.OracleException e) {
+                _t(e.Message.ToString());
+                dr.Dispose();
+                cmd.Dispose();
+                throw;
+            }
+            dr.Read();
+            if (dr.IsDBNull(0)) {
+                dr.Dispose();
+                cmd.Dispose();
+                throw new Exception("Не удалось определить количество заявок в БД № " + numb + " от " + f_date + ".");
+            }
+            if (dr.GetDecimal(0) > 0) {
+                dr.Dispose();
+                cmd.Dispose();
+                return true;
+            }
+            dr.Dispose();
+            cmd.Dispose();
+            return false;
         }
     }
 
