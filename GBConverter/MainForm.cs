@@ -24,6 +24,8 @@ namespace GBConverter {
         private void OpenFileButton_Click(object sender, EventArgs e) {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             if (openFileDialog.ShowDialog() == DialogResult.OK) {
+                this.OpenFileButton.Enabled = false;
+                this.RollbackButton.Enabled = false;
                 this.converter = new Converter();
                 if (this.converter.CheckFile(openFileDialog.FileNames[0], progressBar)) {
                     MessageBox.Show("Несоответствий не выявлено.", "Конвертер Зелёной книги", MessageBoxButtons.OK, MessageBoxIcon.Information);
