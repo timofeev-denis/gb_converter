@@ -406,8 +406,8 @@ namespace GBConverter {
             dr.Dispose();
             cmd.Dispose();
             String query = "insert into AKRIKO.APPEAL " +
-                "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, parent_id, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del, only_sud)" +
-                " VALUES (:newappealid, :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :parent_id, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del, :only_sud)";
+                "(id, numb, f_date, hod_ispoln, is_control, is_repeat, podtv, subjcode, parent_id, is_sud, is_collective, replicate_need, created, unread, meri_cik, links, sud_tematika, content_cik, ispolnitel_cik_id, del)" +
+                " VALUES (:newappealid, :numb, TO_DATE(:f_date, 'DD.MM.YYYY'), :hod_ispoln, :is_control, :is_repeat, :podtv, :subjcode, :parent_id, :is_sud, :is_collective, :replicate_need, :created, :unread, :meri_cik, :links, :sud_tematika, :content_cik, :ispolnitel_cik_id, :del)";
             
             OracleCommand command = new OracleCommand(query, conn);
             command.Parameters.Add(":newappealid", NewAppealID);
@@ -430,7 +430,6 @@ namespace GBConverter {
             command.Parameters.Add(":content_cik", newAppeal.content);
             command.Parameters.Add(":ispolnitel_cik_id", newAppeal.executor_id);
             command.Parameters.Add(":del", "0");
-            command.Parameters.Add(":only_sud", "0");
             
             command.ExecuteNonQuery();
             this.Log("appeal", NewAppealID);
